@@ -3,3 +3,4 @@ pymupdf
 requests
 beautifulsoup4
 scikit-learn
+gunicorn
