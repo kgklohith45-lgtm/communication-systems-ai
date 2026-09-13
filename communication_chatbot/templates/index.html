@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Communication Systems AI</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+
+</head>
+
+
+<body>
+
+<div class="app-container">
+
+
+    <!-- ================================================= -->
+    <!-- LEFT SIDEBAR -->
+    <!-- ================================================= -->
+
+    <aside class="sidebar">
+
+
+        <!-- LOGO -->
+
+        <div class="sidebar-logo">
+
+            <div class="logo-icon">
+                📡
+            </div>
+
+            <div>
+
+                <h2>
+                    Communication
+                </h2>
+
+                <h2>
+                    Systems AI
+                </h2>
+
+            </div>
+
+        </div>
+
+
+        <!-- NEW CHAT -->
+
+        <button
+            class="new-chat-button"
+            onclick="newChat()">
+
+            ➕ New Chat
+
+        </button>
+
+
+        <!-- HISTORY -->
+
+        <div class="history-section">
+
+            <div class="section-title">
+
+                <span>
+                    🕘 Search History
+                </span>
+
+                <button
+                    class="clear-history"
+                    onclick="clearHistory()">
+
+                    Clear
+
+                </button>
+
+            </div>
+
+
+            <div
+                id="history-list"
+                class="history-list">
+
+            </div>
+
+        </div>
+
+
+        <!-- AI TOOLS -->
+
+        <div class="ai-tools">
+
+            <div class="section-title">
+
+                🤖 AI Tools
+
+            </div>
+
+
+            <!-- CHATGPT -->
+
+            <button
+                class="ai-tool-button chatgpt-button"
+                onclick="openChatGPT()">
+
+                <span class="tool-icon">
+                    🤖
+                </span>
+
+                <span>
+                    ChatGPT
+                </span>
+
+                <span class="external-icon">
+                    ↗
+                </span>
+
+            </button>
+
+
+            <!-- GEMINI -->
+
+            <button
+                class="ai-tool-button gemini-button"
+                onclick="openGemini()">
+
+                <span class="tool-icon">
+                    ✨
+                </span>
+
+                <span>
+                    Gemini
+                </span>
+
+                <span class="external-icon">
+                    ↗
+                </span>
+
+            </button>
+
+        </div>
+
+
+        <!-- SIDEBAR FOOTER -->
+
+        <div class="sidebar-footer">
+
+            <p>
+                Communication Systems
+            </p>
+
+            <p>
+                AI Study Assistant
+            </p>
+
+        </div>
+
+
+    </aside>
+
+
+
+    <!-- ================================================= -->
+    <!-- MAIN CONTENT -->
+    <!-- ================================================= -->
+
+    <main class="main-content">
+
+
+        <!-- HEADER -->
+
+        <header class="main-header">
+
+            <div>
+
+                <h1>
+                    📡 Communication Systems AI
+                </h1>
+
+                <p>
+                    Learn Communication Systems using
+                    Internet and PDF resources
+                </p>
+
+            </div>
+
+
+            <div
+                id="mode-badge"
+                class="mode-badge">
+
+                📄 PDF Q&A
+
+            </div>
+
+        </header>
+
+
+
+        <!-- ================================================= -->
+        <!-- CHAT AREA -->
+        <!-- ================================================= -->
+
+        <section
+            id="chat-box"
+            class="chat-box">
+
+
+            <!-- WELCOME MESSAGE -->
+
+            <div class="welcome-card">
+
+                <div class="welcome-icon">
+                    📡
+                </div>
+
+
+                <h2>
+                    Welcome to Communication Systems AI
+                </h2>
+
+
+                <p>
+                    Your personal study assistant for
+                    Communication Systems.
+                </p>
+
+
+                <div class="welcome-options">
+
+
+                    <div class="welcome-option">
+
+                        <span>
+                            🌐
+                        </span>
+
+                        <div>
+
+                            <strong>
+                                Internet Q&A
+                            </strong>
+
+                            <p>
+                                Search the Internet for
+                                Communication Systems topics.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="welcome-option">
+
+                        <span>
+                            📄
+                        </span>
+
+                        <div>
+
+                            <strong>
+                                PDF Q&A
+                            </strong>
+
+                            <p>
+                                Upload a PDF and ask questions
+                                only from its contents.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="welcome-option">
+
+                        <span>
+                            🤖
+                        </span>
+
+                        <div>
+
+                            <strong>
+                                AI Tools
+                            </strong>
+
+                            <p>
+                                Quickly open ChatGPT or Gemini
+                                for additional help.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- ================================================= -->
+        <!-- INPUT AREA -->
+        <!-- ================================================= -->
+
+        <div class="input-section">
+
+
+            <div class="input-box">
+
+                <input
+                    type="text"
+                    id="user-input"
+                    placeholder="Ask a Communication Systems question..."
+                    autocomplete="off"
+                >
+
+
+                <button
+                    class="send-button"
+                    onclick="sendMessage()">
+
+                    <span>
+                        Send
+                    </span>
+
+                    <span>
+                        ➤
+                    </span>
+
+                </button>
+
+            </div>
+
+
+
+            <!-- MODE BUTTONS -->
+
+            <div class="feature-buttons">
+
+
+                <!-- INTERNET -->
+
+                <button
+                    class="feature-button"
+                    onclick="selectInternetMode()">
+
+                    🌐 Internet Q&A
+
+                </button>
+
+
+                <!-- UPLOAD -->
+
+                <button
+                    class="feature-button"
+                    onclick="document.getElementById('pdf-input').click()">
+
+                    📄 Upload PDF
+
+                </button>
+
+
+                <input
+                    type="file"
+                    id="pdf-input"
+                    accept=".pdf"
+                    hidden
+                    onchange="uploadPDF()"
+                >
+
+
+                <!-- PDF -->
+
+                <button
+                    class="feature-button"
+                    onclick="selectPDFMode()">
+
+                    📄 PDF Q&A
+
+                </button>
+
+
+            </div>
+
+
+            <!-- STATUS -->
+
+            <div
+                id="status-message"
+                class="status-message">
+
+                Ready
+
+            </div>
+
+
+        </div>
+
+
+    </main>
+
+</div>
+
+
+
+<script
+    src="{{ url_for('static', filename='script.js') }}">
+</script>
+
+
+</body>
+
+</html>
