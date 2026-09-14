@@ -153,7 +153,10 @@ def find_direct_answer(question):
 
     question = clean_text(question)
 
+    # -----------------------------------------------------
     # Normalize text
+    # -----------------------------------------------------
+
     def normalize(value):
 
         value = value.lower()
@@ -176,7 +179,9 @@ def find_direct_answer(question):
 
     normalized_question = normalize(question)
 
+    # -----------------------------------------------------
     # Remove common question words
+    # -----------------------------------------------------
 
     search_question = re.sub(
         r"^(please\s+)?"
@@ -187,7 +192,9 @@ def find_direct_answer(question):
         normalized_question
     )
 
+    # -----------------------------------------------------
     # Possible search phrases
+    # -----------------------------------------------------
 
     possible_phrases = [
         normalized_question,
@@ -206,7 +213,9 @@ def find_direct_answer(question):
     question_position = -1
     matched_phrase = ""
 
+    # -----------------------------------------------------
     # Search question inside PDF
+    # -----------------------------------------------------
 
     for phrase in possible_phrases:
 
@@ -217,7 +226,6 @@ def find_direct_answer(question):
         if position != -1:
 
             question_position = position
-
             matched_phrase = phrase
 
             break
@@ -225,7 +233,9 @@ def find_direct_answer(question):
     if question_position == -1:
         return None
 
+    # -----------------------------------------------------
     # Text after question
+    # -----------------------------------------------------
 
     start_position = (
         question_position
@@ -237,7 +247,9 @@ def find_direct_answer(question):
         start_position:
     ].strip()
 
+    # -----------------------------------------------------
     # Find next numbered question
+    # -----------------------------------------------------
 
     next_question_pattern = re.compile(
         r"\s+\d{1,3}\.\s+"
@@ -257,7 +269,9 @@ def find_direct_answer(question):
 
         answer = remaining_text.strip()
 
+    # -----------------------------------------------------
     # Remove unwanted headings
+    # -----------------------------------------------------
 
     answer = re.sub(
         r"\s+Unit[- ]?\d+.*$",
@@ -266,7 +280,9 @@ def find_direct_answer(question):
         flags=re.IGNORECASE
     )
 
+    # -----------------------------------------------------
     # Remove image captions
+    # -----------------------------------------------------
 
     answer = re.sub(
         r"\s+(Electrical Network|"
@@ -279,9 +295,15 @@ def find_direct_answer(question):
         flags=re.IGNORECASE
     )
 
+    # -----------------------------------------------------
+    # Clean answer
+    # -----------------------------------------------------
+
     answer = clean_text(answer)
 
+    # -----------------------------------------------------
     # Reject if another question
+    # -----------------------------------------------------
 
     if re.match(
         r"^\d+\.\s*",
@@ -308,7 +330,9 @@ def get_tfidf_answer(question):
 
     text = clean_text(pdf_text)
 
+    # -----------------------------------------------------
     # Split into sentences
+    # -----------------------------------------------------
 
     sentences = re.split(
         r"(?<=[.!?])\s+",
@@ -390,7 +414,9 @@ def get_pdf_answer(question):
             "Please enter a question."
         )
 
-    # First try direct question-answer matching
+    # -----------------------------------------------------
+    # FIRST: Direct question-answer matching
+    # -----------------------------------------------------
 
     direct_answer = find_direct_answer(
         question
@@ -400,7 +426,9 @@ def get_pdf_answer(question):
 
         return direct_answer
 
-    # Second try TF-IDF
+    # -----------------------------------------------------
+    # SECOND: TF-IDF
+    # -----------------------------------------------------
 
     fallback_answer = get_tfidf_answer(
         question
@@ -410,7 +438,9 @@ def get_pdf_answer(question):
 
         return fallback_answer
 
-    # Nothing found
+    # -----------------------------------------------------
+    # NOTHING FOUND
+    # -----------------------------------------------------
 
     return (
         "❌ This information was not found "
@@ -484,10 +514,170 @@ def search_internet(query):
             "Chrome/120.0 Safari/537.36",
 
         "Accept-Language":
-            "en-US,en;q=0.9"
+            "en-US,en;q=0.9",
+
+        "Accept":
+            "text/html,application/xhtml+xml,"
+            "application/xml;q=0.9,*/*;q=0.8"
     }
 
-    # Try DuckDuckGo Lite first
+    # =====================================================
+    # METHOD 1
+    # DuckDuckGo Instant Answer API
+    # =====================================================
+
+    try:
+
+        api_url = (
+            "https://api.duckduckgo.com/?q="
+            + quote(query)
+            + "&format=json"
+            + "&no_html=1"
+            + "&skip_disambig=0"
+        )
+
+        response = requests.get(
+            api_url,
+            headers=headers,
+            timeout=20
+        )
+
+        response.raise_for_status()
+
+        data = response.json()
+
+        results = []
+
+        # -------------------------------------------------
+        # Main result
+        # -------------------------------------------------
+
+        abstract = data.get(
+            "AbstractText",
+            ""
+        )
+
+        abstract_url = data.get(
+            "AbstractURL",
+            ""
+        )
+
+        heading = data.get(
+            "Heading",
+            ""
+        )
+
+        if (
+            abstract
+            and
+            abstract_url
+            and
+            "wikipedia.org"
+            not in
+            abstract_url.lower()
+        ):
+
+            results.append({
+                "title":
+                    heading
+                    if heading
+                    else "DuckDuckGo Result",
+
+                "snippet":
+                    abstract,
+
+                "url":
+                    abstract_url
+            })
+
+        # -------------------------------------------------
+        # Related Topics
+        # -------------------------------------------------
+
+        def extract_topics(topics):
+
+            for topic in topics:
+
+                if not isinstance(
+                    topic,
+                    dict
+                ):
+                    continue
+
+                # Nested topics
+
+                if "Topics" in topic:
+
+                    extract_topics(
+                        topic.get(
+                            "Topics",
+                            []
+                        )
+                    )
+
+                    continue
+
+                text = topic.get(
+                    "Text",
+                    ""
+                )
+
+                first_url = topic.get(
+                    "FirstURL",
+                    ""
+                )
+
+                if not text:
+                    continue
+
+                if not first_url:
+                    continue
+
+                # Never include Wikipedia
+
+                if (
+                    "wikipedia.org"
+                    in
+                    first_url.lower()
+                ):
+                    continue
+
+                results.append({
+                    "title":
+                        text.split(
+                            " - "
+                        )[0],
+
+                    "snippet":
+                        text,
+
+                    "url":
+                        first_url
+                })
+
+        extract_topics(
+            data.get(
+                "RelatedTopics",
+                []
+            )
+        )
+
+        if results:
+
+            return results[:8]
+
+    except Exception as e:
+
+        print(
+            "DuckDuckGo API error:",
+            str(e)
+        )
+
+
+    # =====================================================
+    # METHOD 2
+    # DuckDuckGo Lite
+    # =====================================================
 
     search_urls = [
 
@@ -496,15 +686,13 @@ def search_internet(query):
         "https://html.duckduckgo.com/html/?q="
     ]
 
-    # First search the exact question.
-    # If needed, the communication-systems context
-    # can still help the search engine.
-
     queries = [
 
         query,
 
-        query + " communication systems"
+        query
+        +
+        " communication systems"
     ]
 
     for search_base in search_urls:
@@ -534,9 +722,9 @@ def search_internet(query):
 
                 results = []
 
-                # -------------------------------------------------
+                # =================================================
                 # DuckDuckGo Lite
-                # -------------------------------------------------
+                # =================================================
 
                 links = soup.select(
                     "a.result-link"
@@ -554,18 +742,39 @@ def search_internet(query):
                         ""
                     )
 
-                    if not title or not link:
+                    if not title:
                         continue
 
-                    # Find the closest result container
+                    if not link:
+                        continue
+
+                    # Never include Wikipedia
+
+                    if (
+                        "wikipedia.org"
+                        in
+                        link.lower()
+                    ):
+                        continue
+
+                    # Convert relative URL
+
+                    if link.startswith("/"):
+
+                        link = urljoin(
+                            "https://lite.duckduckgo.com",
+                            link
+                        )
+
+                    snippet = ""
+
+                    # Find result row
 
                     container = (
                         link_element.find_parent(
                             "tr"
                         )
                     )
-
-                    snippet = ""
 
                     if container:
 
@@ -584,163 +793,149 @@ def search_internet(query):
                                 )
                             )
 
-                    # If no snippet was found,
-                    # search nearby text
+                    # Fallback text
 
-                    if not snippet and container:
+                    if (
+                        not snippet
+                        and
+                        container
+                    ):
 
-                        snippet = container.get_text(
+                        text = container.get_text(
                             " ",
                             strip=True
                         )
 
-                        snippet = re.sub(
+                        text = re.sub(
                             r"\s+",
                             " ",
-                            snippet
+                            text
                         )
 
-                        if title in snippet:
+                        if title in text:
 
-                            snippet = snippet.replace(
+                            snippet = text.replace(
                                 title,
                                 "",
                                 1
                             ).strip()
 
-                    # Never include Wikipedia
-
-                    if "wikipedia.org" in link.lower():
+                    if not snippet:
                         continue
 
-                    if not link.startswith("http"):
-                        link = urljoin(
-                            "https://lite.duckduckgo.com",
-                            link
-                        )
-
-                    if snippet:
-
-                        results.append({
-                            "title": title,
-                            "snippet": snippet,
-                            "url": link
-                        })
+                    results.append({
+                        "title": title,
+                        "snippet": snippet,
+                        "url": link
+                    })
 
                     if len(results) >= 8:
                         break
 
-                # -------------------------------------------------
-                # Fallback parser for normal DDG HTML
-                # -------------------------------------------------
+                if results:
 
-                if not results:
+                    return results[:8]
 
-                    for result in soup.select(
-                        ".result"
-                    ):
+                # =================================================
+                # Normal DuckDuckGo HTML fallback
+                # =================================================
 
-                        title_element = (
-                            result.select_one(
-                                ".result__title"
-                            )
+                for result in soup.select(
+                    ".result"
+                ):
+
+                    title_element = (
+                        result.select_one(
+                            ".result__title"
                         )
+                    )
 
-                        snippet_element = (
-                            result.select_one(
-                                ".result__snippet"
-                            )
+                    snippet_element = (
+                        result.select_one(
+                            ".result__snippet"
                         )
+                    )
 
-                        link_element = (
-                            result.select_one(
-                                ".result__a"
-                            )
+                    link_element = (
+                        result.select_one(
+                            ".result__a"
                         )
+                    )
 
-                        if not title_element:
-                            continue
+                    if not title_element:
+                        continue
 
-                        if not link_element:
-                            continue
+                    if not link_element:
+                        continue
 
-                        title = (
-                            title_element.get_text(
+                    title = (
+                        title_element.get_text(
+                            " ",
+                            strip=True
+                        )
+                    )
+
+                    link = link_element.get(
+                        "href",
+                        ""
+                    )
+
+                    if not link:
+                        continue
+
+                    snippet = ""
+
+                    if snippet_element:
+
+                        snippet = (
+                            snippet_element.get_text(
                                 " ",
                                 strip=True
                             )
                         )
 
-                        link = link_element.get(
-                            "href",
-                            ""
-                        )
-
-                        if not link:
-                            continue
-
-                        snippet = ""
-
-                        if snippet_element:
-
-                            snippet = (
-                                snippet_element.get_text(
-                                    " ",
-                                    strip=True
-                                )
-                            )
-
-                        if "wikipedia.org" in link.lower():
-                            continue
-
-                        if link.startswith("/"):
-                            link = urljoin(
-                                search_base,
-                                link
-                            )
-
-                        if snippet:
-
-                            results.append({
-                                "title": title,
-                                "snippet": snippet,
-                                "url": link
-                            })
-
-                        if len(results) >= 8:
-                            break
-
-                # Remove duplicates
-
-                unique_results = []
-
-                seen_urls = set()
-
-                for result in results:
-
-                    if result["url"] in seen_urls:
+                    if (
+                        "wikipedia.org"
+                        in
+                        link.lower()
+                    ):
                         continue
 
-                    seen_urls.add(
-                        result["url"]
-                    )
+                    if link.startswith("/"):
 
-                    unique_results.append(
-                        result
-                    )
+                        link = urljoin(
+                            search_base,
+                            link
+                        )
 
-                if unique_results:
+                    if not snippet:
+                        continue
 
-                    return unique_results[:8]
+                    results.append({
+                        "title": title,
+                        "snippet": snippet,
+                        "url": link
+                    })
+
+                    if len(results) >= 8:
+                        break
+
+                if results:
+
+                    return results[:8]
 
             except Exception as e:
 
                 print(
-                    "Search attempt failed:",
+                    "DuckDuckGo search attempt failed:",
                     str(e)
                 )
 
                 continue
+
+    # =====================================================
+    # NO RESULTS
+    # =====================================================
 
     print(
         "All Internet search attempts failed."
@@ -848,7 +1043,9 @@ def ask_internet():
                     "Please enter a question."
             })
 
+        # -------------------------------------------------
         # Search Internet
+        # -------------------------------------------------
 
         results = search_internet(
             question
@@ -862,7 +1059,9 @@ def ask_internet():
                     "information on the Internet."
             })
 
-        # Select most relevant results
+        # -------------------------------------------------
+        # Select essential results
+        # -------------------------------------------------
 
         selected_results = (
             get_essential_information(
@@ -892,7 +1091,9 @@ def ask_internet():
                     "❌ No useful information was found."
             })
 
-        # Remove duplicate snippets
+        # -------------------------------------------------
+        # Remove duplicate answers
+        # -------------------------------------------------
 
         unique_parts = []
 
@@ -904,7 +1105,9 @@ def ask_internet():
                     part
                 )
 
+        # -------------------------------------------------
         # Create answer
+        # -------------------------------------------------
 
         answer = (
             "📌 <b>Essential information:</b>"
@@ -915,7 +1118,9 @@ def ask_internet():
             )
         )
 
+        # -------------------------------------------------
         # Add sources
+        # -------------------------------------------------
 
         answer += (
             "<br><br>"
@@ -925,9 +1130,13 @@ def ask_internet():
 
         for result in selected_results:
 
-            title = result["title"]
+            title = result[
+                "title"
+            ]
 
-            url = result["url"]
+            url = result[
+                "url"
+            ]
 
             answer += (
                 f'<br>• '
