@@ -1,26 +1,55 @@
 // ============================================================
 // COMMUNICATION SYSTEMS AI - SCRIPT.JS
+// GitHub Pages Frontend
 // ============================================================
 
 document.addEventListener("DOMContentLoaded", () => {
 
-    const questionInput = document.getElementById("questionInput");
-    const sendButton = document.getElementById("sendButton");
-    const answerBox = document.getElementById("answerBox");
+    // ========================================================
+    // BACKEND API URL
+    // ========================================================
+    //
+    // IMPORTANT:
+    // Replace this after deploying the Flask backend.
+    //
+    const API_URL = "YOUR_BACKEND_URL";
 
-    const uploadInput = document.getElementById("pdfInput");
-    const uploadButton = document.getElementById("uploadPdfButton");
 
-    const internetButton = document.getElementById("internetButton");
-    const pdfButton = document.getElementById("pdfButton");
+    const questionInput =
+        document.getElementById("questionInput");
 
-    const newChatButton = document.getElementById("newChatButton");
+    const sendButton =
+        document.getElementById("sendButton");
+
+    const answerBox =
+        document.getElementById("answerBox");
+
+    const uploadInput =
+        document.getElementById("pdfInput");
+
+    const uploadButton =
+        document.getElementById("uploadPdfButton");
+
+    const internetButton =
+        document.getElementById("internetButton");
+
+    const pdfButton =
+        document.getElementById("pdfButton");
+
+    const newChatButton =
+        document.getElementById("newChatButton");
+
     const clearHistoryButton =
         document.getElementById("clearHistoryButton");
 
-    const historyList = document.getElementById("historyList");
-    const statusText = document.getElementById("statusText");
-    const modeBadge = document.getElementById("modeBadge");
+    const historyList =
+        document.getElementById("historyList");
+
+    const statusText =
+        document.getElementById("statusText");
+
+    const modeBadge =
+        document.getElementById("modeBadge");
 
     const pdfUploadArea =
         document.getElementById("pdfUploadArea");
@@ -28,8 +57,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const pdfFileName =
         document.getElementById("pdfFileName");
 
+
     let currentMode = "internet";
+
     let pdfUploaded = false;
+
 
     let searchHistory = JSON.parse(
         localStorage.getItem(
@@ -86,6 +118,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return "";
         }
 
+
         text = String(text)
             .replace(/\r\n/g, "\n")
             .replace(/\r/g, "\n");
@@ -97,9 +130,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const mathBlocks = [];
 
+
         text = text.replace(
             /\$\$([\s\S]*?)\$\$/g,
-            function(match) {
+            function (match) {
 
                 const id =
                     `MATHBLOCK${mathBlocks.length}END`;
@@ -113,7 +147,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         text = text.replace(
             /\\\[([\s\S]*?)\\\]/g,
-            function(match) {
+            function (match) {
 
                 const id =
                     `MATHBLOCK${mathBlocks.length}END`;
@@ -131,9 +165,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const inlineMath = [];
 
+
         text = text.replace(
             /\$([^\n$]+?)\$/g,
-            function(match) {
+            function (match) {
 
                 const id =
                     `MATHINLINE${inlineMath.length}END`;
@@ -147,7 +182,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         text = text.replace(
             /\\\((.*?)\\\)/g,
-            function(match) {
+            function (match) {
 
                 const id =
                     `MATHINLINE${inlineMath.length}END`;
@@ -178,10 +213,12 @@ document.addEventListener("DOMContentLoaded", () => {
             "\n* "
         );
 
+
         text = text.replace(
             /\s+-\s+(?=\*\*)/g,
             "\n- "
         );
+
 
         text = text.replace(
             /\s+•\s+/g,
@@ -300,11 +337,14 @@ document.addEventListener("DOMContentLoaded", () => {
         // Convert lines
         // ----------------------------------------------------
 
-        const lines = text.split("\n");
+        const lines =
+            text.split("\n");
+
 
         let html = "";
 
         let inList = false;
+
         let listType = null;
 
 
@@ -318,6 +358,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         : "</ul>";
 
                 inList = false;
+
                 listType = null;
             }
         }
@@ -325,7 +366,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         for (let rawLine of lines) {
 
-            const line = rawLine.trim();
+            const line =
+                rawLine.trim();
 
 
             if (!line) {
@@ -333,7 +375,10 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
 
+            // ------------------------------------------------
             // Heading
+            // ------------------------------------------------
+
             if (line.startsWith("### ")) {
 
                 closeList();
@@ -373,7 +418,10 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
 
+            // ------------------------------------------------
             // Bullet
+            // ------------------------------------------------
+
             if (
                 line.startsWith("- ") ||
                 line.startsWith("* ") ||
@@ -390,11 +438,13 @@ document.addEventListener("DOMContentLoaded", () => {
                     html += "<ul>";
 
                     inList = true;
+
                     listType = "unordered";
                 }
 
 
-                let item = line.substring(2);
+                const item =
+                    line.substring(2);
 
 
                 html +=
@@ -406,7 +456,10 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
 
+            // ------------------------------------------------
             // Numbered list
+            // ------------------------------------------------
+
             const numberMatch =
                 line.match(
                     /^(\d+)\.\s+(.*)$/
@@ -425,6 +478,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     html += "<ol>";
 
                     inList = true;
+
                     listType = "ordered";
                 }
 
@@ -438,7 +492,10 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
 
+            // ------------------------------------------------
             // Normal paragraph
+            // ------------------------------------------------
+
             closeList();
 
             html +=
@@ -449,6 +506,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
         closeList();
+
 
         return html;
     }
@@ -465,20 +523,32 @@ document.addEventListener("DOMContentLoaded", () => {
             answerBox
         ) {
 
-            MathJax.typesetClear(
-                [answerBox]
-            );
+            try {
 
-            MathJax.typesetPromise(
-                [answerBox]
-            ).catch(error => {
+                MathJax.typesetClear(
+                    [answerBox]
+                );
+
+
+                MathJax.typesetPromise(
+                    [answerBox]
+                ).catch(error => {
+
+                    console.error(
+                        "MathJax error:",
+                        error
+                    );
+
+                });
+
+            } catch (error) {
 
                 console.error(
-                    "MathJax error:",
+                    "MathJax rendering error:",
                     error
                 );
 
-            });
+            }
         }
     }
 
@@ -623,7 +693,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     "history-item";
 
 
-                item.type = "button";
+                item.type =
+                    "button";
 
 
                 item.textContent =
@@ -656,9 +727,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
         searchHistory = [];
 
+
         localStorage.removeItem(
             "communicationSearchHistory"
         );
+
 
         renderHistory();
     }
@@ -670,7 +743,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function setMode(mode) {
 
-        currentMode = mode;
+        currentMode =
+            mode;
 
 
         internetButton.classList.toggle(
@@ -699,6 +773,7 @@ document.addEventListener("DOMContentLoaded", () => {
             statusText.textContent =
                 "Internet Q&A mode";
 
+
             pdfUploadArea.style.display =
                 "none";
 
@@ -708,6 +783,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 pdfUploaded
                     ? "PDF Q&A mode"
                     : "Select a PDF file";
+
 
             pdfUploadArea.style.display =
                 "flex";
@@ -748,11 +824,29 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
 
-        addToHistory(question);
+        if (
+            !API_URL ||
+            API_URL === "YOUR_BACKEND_URL"
+        ) {
+
+            showError(
+                "Backend is not connected yet. Deploy the Flask backend and add its URL in script.js."
+            );
+
+            return;
+        }
+
+
+        addToHistory(
+            question
+        );
+
 
         showLoading();
 
-        sendButton.disabled = true;
+
+        sendButton.disabled =
+            true;
 
 
         const endpoint =
@@ -765,7 +859,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const response =
                 await fetch(
-                    endpoint,
+                    API_URL + endpoint,
                     {
                         method: "POST",
 
@@ -811,18 +905,20 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (error) {
 
             console.error(
+                "Question error:",
                 error
             );
 
 
             showError(
-                "Unable to connect to the server."
+                "Unable to connect to the backend server."
             );
 
 
         } finally {
 
-            sendButton.disabled = false;
+            sendButton.disabled =
+                false;
         }
     }
 
@@ -834,9 +930,6 @@ document.addEventListener("DOMContentLoaded", () => {
     uploadButton.addEventListener(
         "click",
         () => {
-
-            // IMPORTANT:
-            // Open Windows file picker
 
             uploadInput.click();
 
@@ -871,7 +964,23 @@ document.addEventListener("DOMContentLoaded", () => {
                     "Please select a PDF file."
                 );
 
-                uploadInput.value = "";
+
+                uploadInput.value =
+                    "";
+
+
+                return;
+            }
+
+
+            if (
+                !API_URL ||
+                API_URL === "YOUR_BACKEND_URL"
+            ) {
+
+                showError(
+                    "Backend is not connected yet. Deploy the Flask backend and add its URL in script.js."
+                );
 
                 return;
             }
@@ -891,7 +1000,8 @@ document.addEventListener("DOMContentLoaded", () => {
             );
 
 
-            uploadButton.disabled = true;
+            uploadButton.disabled =
+                true;
 
 
             statusText.textContent =
@@ -902,12 +1012,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 const response =
                     await fetch(
-                        "/upload_pdf",
+                        API_URL + "/upload_pdf",
                         {
                             method: "POST",
                             body: formData
                         }
                     );
+
+
+                if (!response.ok) {
+
+                    throw new Error(
+                        `Server error: ${response.status}`
+                    );
+                }
 
 
                 const data =
@@ -916,9 +1034,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 if (data.success) {
 
-                    pdfUploaded = true;
+                    pdfUploaded =
+                        true;
 
-                    setMode("pdf");
+
+                    setMode(
+                        "pdf"
+                    );
 
 
                     statusText.textContent =
@@ -937,6 +1059,7 @@ The PDF Q&A mode answers questions using the uploaded document.
 
                     `);
 
+
                 } else {
 
                     showError(
@@ -950,12 +1073,13 @@ The PDF Q&A mode answers questions using the uploaded document.
             } catch (error) {
 
                 console.error(
+                    "PDF upload error:",
                     error
                 );
 
 
                 showError(
-                    "Unable to upload PDF."
+                    "Unable to upload PDF to the backend."
                 );
 
             } finally {
@@ -976,11 +1100,17 @@ The PDF Q&A mode answers questions using the uploaded document.
         "click",
         () => {
 
-            questionInput.value = "";
+            questionInput.value =
+                "";
 
-            pdfUploaded = false;
 
-            uploadInput.value = "";
+            pdfUploaded =
+                false;
+
+
+            uploadInput.value =
+                "";
+
 
             pdfFileName.textContent =
                 "No PDF selected";
@@ -1014,7 +1144,9 @@ The PDF Q&A mode answers questions using the uploaded document.
             `;
 
 
-            setMode("internet");
+            setMode(
+                "internet"
+            );
 
         }
     );
@@ -1034,7 +1166,9 @@ The PDF Q&A mode answers questions using the uploaded document.
         "click",
         () => {
 
-            setMode("internet");
+            setMode(
+                "internet"
+            );
 
         }
     );
@@ -1044,7 +1178,9 @@ The PDF Q&A mode answers questions using the uploaded document.
         "click",
         () => {
 
-            setMode("pdf");
+            setMode(
+                "pdf"
+            );
 
         }
     );
@@ -1084,6 +1220,8 @@ The PDF Q&A mode answers questions using the uploaded document.
 
     renderHistory();
 
-    setMode("internet");
+    setMode(
+        "internet"
+    );
 
 });
