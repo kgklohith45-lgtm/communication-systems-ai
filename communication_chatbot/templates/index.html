@@ -5,32 +5,99 @@
 
     <meta charset="UTF-8">
 
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
-    <title>Communication Systems AI</title>
+    <title>
+        Communication Systems AI
+    </title>
 
-    <link rel="stylesheet"
-          href="{{ url_for('static', filename='style.css') }}">
+    <meta
+        name="description"
+        content="AI Study Assistant for Communication Systems and Computer Networks"
+    >
+
+
+    <!-- =====================================================
+         MAIN CSS
+    ====================================================== -->
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+
+
+    <!-- =====================================================
+         MATHJAX CONFIGURATION
+    ====================================================== -->
+
+    <script>
+
+        window.MathJax = {
+
+            tex: {
+
+                inlineMath: [
+                    ['$', '$'],
+                    ['\\(', '\\)']
+                ],
+
+                displayMath: [
+                    ['$$', '$$'],
+                    ['\\[', '\\]']
+                ]
+
+            },
+
+            options: {
+
+                skipHtmlTags: [
+                    'script',
+                    'noscript',
+                    'style',
+                    'textarea',
+                    'pre',
+                    'code'
+                ]
+
+            }
+
+        };
+
+    </script>
+
+
+    <!-- =====================================================
+         MATHJAX
+    ====================================================== -->
+
+    <script
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
+    ></script>
+
 
 </head>
 
 
 <body>
 
-<div class="app-container">
+
+<div class="app">
 
 
-    <!-- ================================================= -->
-    <!-- LEFT SIDEBAR -->
-    <!-- ================================================= -->
+    <!-- =====================================================
+         SIDEBAR
+    ====================================================== -->
 
     <aside class="sidebar">
 
 
         <!-- LOGO -->
 
-        <div class="sidebar-logo">
+        <div class="logo">
 
             <div class="logo-icon">
                 📡
@@ -39,12 +106,13 @@
             <div>
 
                 <h2>
-                    Communication
-                </h2>
-
-                <h2>
+                    Communication<br>
                     Systems AI
                 </h2>
+
+                <span>
+                    AI Study Assistant
+                </span>
 
             </div>
 
@@ -54,38 +122,45 @@
         <!-- NEW CHAT -->
 
         <button
-            class="new-chat-button"
-            onclick="newChat()">
+            id="newChatButton"
+            class="new-chat"
+            type="button"
+        >
 
-            ➕ New Chat
+            ＋ New Chat
 
         </button>
 
 
-        <!-- HISTORY -->
+        <!-- SEARCH HISTORY -->
 
         <div class="history-section">
 
-            <div class="section-title">
+            <div class="history-header">
 
                 <span>
                     🕘 Search History
                 </span>
 
                 <button
-                    class="clear-history"
-                    onclick="clearHistory()">
-
+                    id="clearHistoryButton"
+                    class="history-clear"
+                    type="button"
+                >
                     Clear
-
                 </button>
 
             </div>
 
 
             <div
-                id="history-list"
-                class="history-list">
+                id="historyList"
+                class="history-list"
+            >
+
+                <div class="empty-history">
+                    No search history
+                </div>
 
             </div>
 
@@ -96,68 +171,31 @@
 
         <div class="ai-tools">
 
-            <div class="section-title">
-
+            <h3>
                 🤖 AI Tools
+            </h3>
 
-            </div>
-
-
-            <!-- CHATGPT -->
 
             <button
-                class="ai-tool-button chatgpt-button"
-                onclick="openChatGPT()">
+                class="tool-button"
+                type="button"
+                onclick="window.open('https://chatgpt.com/', '_blank')"
+            >
 
-                <span class="tool-icon">
-                    🤖
-                </span>
-
-                <span>
-                    ChatGPT
-                </span>
-
-                <span class="external-icon">
-                    ↗
-                </span>
+                🤖 &nbsp; ChatGPT
 
             </button>
 
 
-            <!-- GEMINI -->
-
             <button
-                class="ai-tool-button gemini-button"
-                onclick="openGemini()">
+                class="tool-button"
+                type="button"
+                onclick="window.open('https://gemini.google.com/', '_blank')"
+            >
 
-                <span class="tool-icon">
-                    ✨
-                </span>
-
-                <span>
-                    Gemini
-                </span>
-
-                <span class="external-icon">
-                    ↗
-                </span>
+                ✨ &nbsp; Gemini
 
             </button>
-
-        </div>
-
-
-        <!-- SIDEBAR FOOTER -->
-
-        <div class="sidebar-footer">
-
-            <p>
-                Communication Systems
-            </p>
-
-            <p>
-                AI Study Assistant
-            </p>
 
         </div>
 
@@ -166,257 +204,234 @@
 
 
 
-    <!-- ================================================= -->
-    <!-- MAIN CONTENT -->
-    <!-- ================================================= -->
+    <!-- =====================================================
+         MAIN
+    ====================================================== -->
 
-    <main class="main-content">
+    <main class="main">
 
 
         <!-- HEADER -->
 
-        <header class="main-header">
+        <header class="header">
 
-            <div>
 
-                <h1>
-                    📡 Communication Systems AI
-                </h1>
+            <div class="header-left">
 
-                <p>
-                    Learn Communication Systems using
-                    Internet and PDF resources
-                </p>
+                <div class="header-icon">
+                    📡
+                </div>
+
+
+                <div>
+
+                    <h1>
+                        Communication Systems AI
+                    </h1>
+
+                    <p>
+                        Learn Communication Systems using
+                        Internet and PDF resources
+                    </p>
+
+                </div>
 
             </div>
 
 
             <div
-                id="mode-badge"
-                class="mode-badge">
+                id="modeBadge"
+                class="mode-badge"
+            >
 
-                📄 PDF Q&A
+                🌐 Internet Q&amp;A
 
             </div>
+
 
         </header>
 
 
 
-        <!-- ================================================= -->
-        <!-- CHAT AREA -->
-        <!-- ================================================= -->
+        <!-- =================================================
+             CONTENT
+        ================================================== -->
 
-        <section
-            id="chat-box"
-            class="chat-box">
+        <section class="content">
 
 
-            <!-- WELCOME MESSAGE -->
+            <!-- ANSWER -->
 
-            <div class="welcome-card">
-
-                <div class="welcome-icon">
-                    📡
-                </div>
+            <div class="answer-card">
 
 
-                <h2>
-                    Welcome to Communication Systems AI
-                </h2>
+                <div
+                    id="answerBox"
+                    class="ai-answer"
+                >
 
+                    <div class="welcome-answer">
 
-                <p>
-                    Your personal study assistant for
-                    Communication Systems.
-                </p>
-
-
-                <div class="welcome-options">
-
-
-                    <div class="welcome-option">
-
-                        <span>
-                            🌐
-                        </span>
-
-                        <div>
-
-                            <strong>
-                                Internet Q&A
-                            </strong>
-
-                            <p>
-                                Search the Internet for
-                                Communication Systems topics.
-                            </p>
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="welcome-option">
-
-                        <span>
-                            📄
-                        </span>
-
-                        <div>
-
-                            <strong>
-                                PDF Q&A
-                            </strong>
-
-                            <p>
-                                Upload a PDF and ask questions
-                                only from its contents.
-                            </p>
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="welcome-option">
-
-                        <span>
+                        <div class="welcome-icon">
                             🤖
-                        </span>
-
-                        <div>
-
-                            <strong>
-                                AI Tools
-                            </strong>
-
-                            <p>
-                                Quickly open ChatGPT or Gemini
-                                for additional help.
-                            </p>
-
                         </div>
+
+
+                        <h3>
+                            AI Assistant
+                        </h3>
+
+
+                        <p>
+                            Ask a Communication Systems
+                            or Computer Networks question.
+                        </p>
+
+
+                        <p>
+                            Use Internet Q&amp;A to search
+                            relevant information, or upload
+                            a PDF and ask questions directly
+                            from the document.
+                        </p>
 
                     </div>
 
-
                 </div>
+
 
             </div>
+
+
+
+            <!-- QUESTION -->
+
+            <section class="question-section">
+
+
+                <div class="question-row">
+
+
+                    <input
+                        type="text"
+                        id="questionInput"
+                        placeholder="Ask a Communication Systems question..."
+                        autocomplete="off"
+                    >
+
+
+                    <button
+                        id="sendButton"
+                        type="button"
+                    >
+
+                        Send ➤
+
+                    </button>
+
+
+                </div>
+
+
+
+                <!-- MODE BUTTONS -->
+
+                <div class="action-buttons">
+
+
+                    <button
+                        id="internetButton"
+                        class="action-button active-mode"
+                        type="button"
+                    >
+
+                        🌐 Internet Q&amp;A
+
+                    </button>
+
+
+                    <button
+                        id="uploadPdfButton"
+                        class="action-button"
+                        type="button"
+                    >
+
+                        📄 Upload PDF
+
+                    </button>
+
+
+                    <button
+                        id="pdfButton"
+                        class="action-button"
+                        type="button"
+                    >
+
+                        📄 PDF Q&amp;A
+
+                    </button>
+
+
+                </div>
+
+
+
+                <!-- PDF UPLOAD -->
+
+                <div
+                    id="pdfUploadArea"
+                    class="pdf-upload-area"
+                >
+
+
+                    <input
+                        type="file"
+                        id="pdfInput"
+                        accept=".pdf,application/pdf"
+                    >
+
+
+                    <span id="pdfFileName">
+                        No PDF selected
+                    </span>
+
+
+                </div>
+
+
+
+                <!-- STATUS -->
+
+                <div
+                    id="statusText"
+                    class="status"
+                >
+
+                    Ready
+
+                </div>
+
+
+            </section>
+
 
         </section>
 
 
-
-        <!-- ================================================= -->
-        <!-- INPUT AREA -->
-        <!-- ================================================= -->
-
-        <div class="input-section">
-
-
-            <div class="input-box">
-
-                <input
-                    type="text"
-                    id="user-input"
-                    placeholder="Ask a Communication Systems question..."
-                    autocomplete="off"
-                >
-
-
-                <button
-                    class="send-button"
-                    onclick="sendMessage()">
-
-                    <span>
-                        Send
-                    </span>
-
-                    <span>
-                        ➤
-                    </span>
-
-                </button>
-
-            </div>
-
-
-
-            <!-- MODE BUTTONS -->
-
-            <div class="feature-buttons">
-
-
-                <!-- INTERNET -->
-
-                <button
-                    class="feature-button"
-                    onclick="selectInternetMode()">
-
-                    🌐 Internet Q&A
-
-                </button>
-
-
-                <!-- UPLOAD -->
-
-                <button
-                    class="feature-button"
-                    onclick="document.getElementById('pdf-input').click()">
-
-                    📄 Upload PDF
-
-                </button>
-
-
-                <input
-                    type="file"
-                    id="pdf-input"
-                    accept=".pdf"
-                    hidden
-                    onchange="uploadPDF()"
-                >
-
-
-                <!-- PDF -->
-
-                <button
-                    class="feature-button"
-                    onclick="selectPDFMode()">
-
-                    📄 PDF Q&A
-
-                </button>
-
-
-            </div>
-
-
-            <!-- STATUS -->
-
-            <div
-                id="status-message"
-                class="status-message">
-
-                Ready
-
-            </div>
-
-
-        </div>
-
-
     </main>
+
 
 </div>
 
 
 
+<!-- =========================================================
+     JAVASCRIPT
+========================================================== -->
+
 <script
-    src="{{ url_for('static', filename='script.js') }}">
-</script>
+    src="{{ url_for('static', filename='script.js') }}"
+></script>
 
 
 </body>

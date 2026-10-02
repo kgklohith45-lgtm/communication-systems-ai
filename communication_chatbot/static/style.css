@@ -1,6 +1,12 @@
-/* =========================================================
-   GENERAL
-   ========================================================= */
+/* ============================================================
+   COMMUNICATION SYSTEMS AI
+   MAIN STYLESHEET
+   ============================================================ */
+
+
+/* ============================================================
+   RESET
+   ============================================================ */
 
 * {
     box-sizing: border-box;
@@ -9,247 +15,200 @@
 }
 
 
-body {
+/* ============================================================
+   BODY
+   ============================================================ */
 
+body {
     font-family:
+        Inter,
         Arial,
         Helvetica,
         sans-serif;
 
     background:
-        #eef2f7;
+        #eef3f9;
 
     color:
         #1f2937;
 
-    height: 100vh;
-
-    overflow: hidden;
+    min-height:
+        100vh;
 }
 
 
+/* ============================================================
+   APP
+   ============================================================ */
 
-/* =========================================================
-   MAIN APP
-   ========================================================= */
-
-.app-container {
-
+.app {
     display: flex;
 
-    height: 100vh;
+    min-height: 100vh;
 
     width: 100%;
-
 }
 
 
-
-/* =========================================================
+/* ============================================================
    SIDEBAR
-   ========================================================= */
+   ============================================================ */
 
 .sidebar {
+    width: 360px;
 
-    width: 280px;
-
-    min-width: 280px;
+    min-width: 300px;
 
     background:
-        #17233c;
+        #14213d;
 
     color:
         white;
+
+    padding:
+        28px 20px;
 
     display: flex;
 
     flex-direction: column;
 
-    padding: 22px 16px;
+    position: fixed;
 
+    left: 0;
+
+    top: 0;
+
+    bottom: 0;
+
+    overflow-y: auto;
 }
 
 
+/* ============================================================
+   LOGO
+   ============================================================ */
 
-/* =========================================================
-   SIDEBAR LOGO
-   ========================================================= */
-
-.sidebar-logo {
-
+.logo {
     display: flex;
 
     align-items: center;
 
-    gap: 12px;
+    gap: 15px;
 
     padding:
-        8px 8px 22px;
+        10px 15px 28px;
 
     border-bottom:
-        1px solid rgba(255,255,255,0.12);
-
+        1px solid rgba(
+            255,
+            255,
+            255,
+            0.12
+        );
 }
 
 
 .logo-icon {
+    width: 55px;
 
-    font-size: 34px;
+    height: 55px;
 
-}
-
-
-.sidebar-logo h2 {
-
-    font-size: 17px;
-
-    line-height: 1.15;
-
-}
-
-
-
-/* =========================================================
-   NEW CHAT
-   ========================================================= */
-
-.new-chat-button {
-
-    width: 100%;
-
-    margin-top: 20px;
-
-    padding: 13px;
-
-    border: none;
-
-    border-radius: 10px;
+    border-radius: 15px;
 
     background:
-        #3157a4;
-
-    color: white;
-
-    font-size: 15px;
-
-    font-weight: bold;
-
-    cursor: pointer;
-
-}
-
-
-.new-chat-button:hover {
-
-    background:
-        #3e6bc4;
-
-}
-
-
-
-/* =========================================================
-   SECTION TITLE
-   ========================================================= */
-
-.section-title {
+        #315db3;
 
     display: flex;
 
-    justify-content: space-between;
-
     align-items: center;
 
-    font-size: 14px;
+    justify-content: center;
 
-    font-weight: bold;
+    font-size: 28px;
+}
 
+
+.logo h2 {
+    font-size: 22px;
+
+    line-height: 1.2;
+
+    margin-bottom: 5px;
+}
+
+
+.logo span {
     color:
-        #d9e2f5;
+        #aebbd2;
 
-    margin-bottom: 10px;
-
+    font-size: 12px;
 }
 
 
+/* ============================================================
+   NEW CHAT BUTTON
+   ============================================================ */
 
-/* =========================================================
-   HISTORY
-   ========================================================= */
-
-.history-section {
-
-    margin-top: 25px;
-
-    flex: 1;
-
-    overflow: hidden;
-
-}
-
-
-.history-list {
-
-    overflow-y: auto;
-
-    height: calc(100% - 35px);
-
-    padding-right: 3px;
-
-}
-
-
-.history-item {
-
+.new-chat {
     width: 100%;
 
-    padding: 11px 10px;
-
-    margin-bottom: 6px;
+    margin:
+        25px 0;
 
     border: none;
 
-    border-radius: 8px;
+    border-radius: 12px;
+
+    padding:
+        15px;
 
     background:
-        transparent;
+        #3864ba;
 
     color:
-        #e5eaf4;
+        white;
 
-    text-align: left;
+    font-size: 17px;
+
+    font-weight: 700;
 
     cursor: pointer;
 
-    font-size: 13px;
-
-    line-height: 1.35;
-
+    transition:
+        0.2s ease;
 }
 
 
-.history-item:hover {
-
+.new-chat:hover {
     background:
-        rgba(255,255,255,0.1);
+        #4774c8;
 
+    transform:
+        translateY(-1px);
 }
 
 
-.history-empty {
+/* ============================================================
+   SEARCH HISTORY
+   ============================================================ */
+
+.history-header {
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    margin-bottom: 12px;
 
     color:
-        #9daac2;
+        #e6edf8;
 
-    font-size: 13px;
-
-    padding: 10px 4px;
-
+    font-weight: 700;
 }
 
 
-.clear-history {
-
+.history-clear {
     border: none;
 
     background: transparent;
@@ -259,695 +218,1169 @@ body {
 
     cursor: pointer;
 
-    font-size: 12px;
-
+    font-size: 13px;
 }
 
 
-.clear-history:hover {
-
-    color: white;
-
-}
-
-
-
-/* =========================================================
-   AI TOOLS
-   ========================================================= */
-
-.ai-tools {
-
-    margin-top: 18px;
-
-    border-top:
-        1px solid rgba(255,255,255,0.12);
-
-    padding-top: 18px;
-
-}
-
-
-.ai-tool-button {
-
-    width: 100%;
-
-    display: flex;
-
-    align-items: center;
-
-    gap: 10px;
-
-    padding: 12px;
-
-    margin-top: 8px;
-
-    border: none;
-
-    border-radius: 9px;
-
-    color: white;
-
-    cursor: pointer;
-
-    font-size: 14px;
-
-    font-weight: bold;
-
-    text-align: left;
-
-}
-
-
-.chatgpt-button {
-
-    background:
-        #263653;
-
-}
-
-
-.chatgpt-button:hover {
-
-    background:
-        #33476b;
-
-}
-
-
-.gemini-button {
-
-    background:
-        #263653;
-
-}
-
-
-.gemini-button:hover {
-
-    background:
-        #33476b;
-
-}
-
-
-.tool-icon {
-
-    font-size: 19px;
-
-}
-
-
-.external-icon {
-
-    margin-left: auto;
-
-    font-size: 17px;
-
-}
-
-
-
-/* =========================================================
-   SIDEBAR FOOTER
-   ========================================================= */
-
-.sidebar-footer {
-
-    border-top:
-        1px solid rgba(255,255,255,0.12);
-
-    padding-top: 15px;
-
-    margin-top: 15px;
-
+.history-clear:hover {
     color:
-        #91a0b9;
-
-    font-size: 11px;
-
-    text-align: center;
-
+        white;
 }
 
 
-
-/* =========================================================
-   MAIN CONTENT
-   ========================================================= */
-
-.main-content {
-
-    flex: 1;
-
+.history-list {
     display: flex;
 
     flex-direction: column;
 
-    min-width: 0;
+    gap: 5px;
 
-}
-
-
-
-/* =========================================================
-   HEADER
-   ========================================================= */
-
-.main-header {
-
-    background:
-        white;
-
-    padding:
-        20px 30px;
-
-    border-bottom:
-        1px solid #dce2ea;
-
-    display: flex;
-
-    justify-content: space-between;
-
-    align-items: center;
-
-}
-
-
-.main-header h1 {
-
-    font-size: 24px;
-
-    color:
-        #1d3f85;
-
-}
-
-
-.main-header p {
-
-    margin-top: 5px;
-
-    color:
-        #6b7280;
-
-    font-size: 14px;
-
-}
-
-
-.mode-badge {
-
-    padding:
-        9px 15px;
-
-    border-radius: 20px;
-
-    background:
-        #e8efff;
-
-    color:
-        #23478f;
-
-    font-size: 13px;
-
-    font-weight: bold;
-
-}
-
-
-
-/* =========================================================
-   CHAT BOX
-   ========================================================= */
-
-.chat-box {
-
-    flex: 1;
+    max-height: 300px;
 
     overflow-y: auto;
-
-    padding:
-        28px;
-
 }
 
 
-
-/* =========================================================
-   WELCOME
-   ========================================================= */
-
-.welcome-card {
-
-    max-width: 800px;
-
-    margin:
-        50px auto;
-
-    background:
-        white;
-
-    border-radius: 18px;
-
-    padding:
-        35px;
-
-    text-align: center;
-
-    box-shadow:
-        0 8px 25px rgba(0,0,0,0.07);
-
-}
-
-
-.welcome-icon {
-
-    font-size: 50px;
-
-    margin-bottom: 15px;
-
-}
-
-
-.welcome-card h2 {
-
-    color:
-        #203f7e;
-
-    margin-bottom: 10px;
-
-}
-
-
-.welcome-card > p {
-
-    color:
-        #6b7280;
-
-    margin-bottom: 25px;
-
-}
-
-
-.welcome-options {
-
-    display: flex;
-
-    gap: 12px;
-
-    text-align: left;
-
-}
-
-
-.welcome-option {
-
-    flex: 1;
-
-    padding: 17px;
-
-    border-radius: 12px;
-
-    background:
-        #f4f7fb;
-
-    display: flex;
-
-    gap: 10px;
-
-}
-
-
-.welcome-option > span {
-
-    font-size: 23px;
-
-}
-
-
-.welcome-option strong {
-
-    font-size: 14px;
-
-}
-
-
-.welcome-option p {
-
-    color:
-        #6b7280;
-
-    font-size: 12px;
-
-    margin-top: 5px;
-
-    line-height: 1.4;
-
-}
-
-
-
-/* =========================================================
-   CHAT MESSAGES
-   ========================================================= */
-
-.user-message,
-.bot-message {
-
-    max-width: 85%;
-
-    padding:
-        14px 17px;
-
-    margin-bottom: 15px;
-
-    border-radius: 13px;
-
-    line-height: 1.6;
-
-    font-size: 15px;
-
-}
-
-
-.user-message {
-
-    margin-left: auto;
-
-    background:
-        #dbe9ff;
-
-    color:
-        #162b50;
-
-    border-bottom-right-radius: 3px;
-
-}
-
-
-.bot-message {
-
-    margin-right: auto;
-
-    background:
-        white;
-
-    color:
-        #202938;
-
-    border:
-        1px solid #e0e5ec;
-
-    box-shadow:
-        0 3px 12px rgba(0,0,0,0.04);
-
-    border-bottom-left-radius: 3px;
-
-}
-
-
-.user-message strong,
-.bot-message strong {
-
-    display: block;
-
-    margin-bottom: 5px;
-
-}
-
-
-.bot-message a {
-
-    color:
-        #2456a6;
-
-    text-decoration: none;
-
-}
-
-
-.bot-message a:hover {
-
-    text-decoration: underline;
-
-}
-
-
-
-/* =========================================================
-   INPUT SECTION
-   ========================================================= */
-
-.input-section {
-
-    background:
-        white;
-
-    border-top:
-        1px solid #dce2ea;
-
-    padding:
-        15px 25px 18px;
-
-}
-
-
-.input-box {
-
-    display: flex;
-
-    gap: 10px;
-
-}
-
-
-#user-input {
-
-    flex: 1;
-
-    padding:
-        14px 17px;
-
-    border:
-        2px solid #cbd5e1;
-
-    border-radius: 12px;
-
-    outline: none;
-
-    font-size: 15px;
-
-}
-
-
-#user-input:focus {
-
-    border-color:
-        #3157a4;
-
-}
-
-
-.send-button {
-
-    padding:
-        0 22px;
+.history-item {
+    width: 100%;
 
     border: none;
-
-    border-radius: 11px;
-
-    background:
-        #284c95;
-
-    color: white;
-
-    cursor: pointer;
-
-    font-weight: bold;
-
-    font-size: 15px;
-
-}
-
-
-.send-button:hover {
-
-    background:
-        #3564bd;
-
-}
-
-
-
-/* =========================================================
-   FEATURE BUTTONS
-   ========================================================= */
-
-.feature-buttons {
-
-    display: flex;
-
-    gap: 10px;
-
-    margin-top: 11px;
-
-}
-
-
-.feature-button {
-
-    flex: 1;
-
-    padding:
-        11px;
-
-    border: none;
-
-    border-radius: 9px;
-
-    background:
-        #34435a;
-
-    color: white;
-
-    cursor: pointer;
-
-    font-size: 13px;
-
-    font-weight: bold;
-
-}
-
-
-.feature-button:hover {
-
-    background:
-        #465a78;
-
-}
-
-
-
-/* =========================================================
-   STATUS
-   ========================================================= */
-
-.status-message {
-
-    text-align: center;
-
-    margin-top: 8px;
-
-    font-size: 12px;
-
-    color:
-        #687386;
-
-}
-
-
-
-/* =========================================================
-   SCROLLBAR
-   ========================================================= */
-
-::-webkit-scrollbar {
-
-    width: 7px;
-
-}
-
-
-::-webkit-scrollbar-track {
 
     background:
         transparent;
 
+    color:
+        #d8e0ef;
+
+    text-align: left;
+
+    padding:
+        11px 12px;
+
+    border-radius: 8px;
+
+    cursor: pointer;
+
+    font-size: 13px;
+
+    line-height: 1.4;
+
+    overflow: hidden;
+
+    text-overflow: ellipsis;
+
+    white-space: nowrap;
+
+    transition:
+        0.2s ease;
 }
 
 
-::-webkit-scrollbar-thumb {
+.history-item:hover {
+    background:
+        rgba(
+            255,
+            255,
+            255,
+            0.08
+        );
+
+    color:
+        white;
+}
+
+
+.empty-history {
+    color:
+        #8493ad;
+
+    font-size: 13px;
+
+    padding:
+        12px;
+}
+
+
+/* ============================================================
+   AI TOOLS
+   ============================================================ */
+
+.ai-tools {
+    margin-top: auto;
+
+    padding-top: 25px;
+
+    border-top:
+        1px solid rgba(
+            255,
+            255,
+            255,
+            0.12
+        );
+}
+
+
+.ai-tools h3 {
+    font-size: 17px;
+
+    margin-bottom: 12px;
+}
+
+
+.tool-button {
+    width: 100%;
+
+    border: none;
 
     background:
-        #b7c0cf;
+        #263957;
 
-    border-radius: 10px;
+    color:
+        white;
 
+    padding:
+        15px;
+
+    margin-bottom: 9px;
+
+    border-radius: 11px;
+
+    text-align: left;
+
+    cursor: pointer;
+
+    font-size: 15px;
+
+    transition:
+        0.2s ease;
 }
 
 
-
-/* =========================================================
-   MOBILE
-   ========================================================= */
-
-@media (max-width: 850px) {
-
-    .sidebar {
-
-        width: 220px;
-
-        min-width: 220px;
-
-    }
-
-
-    .welcome-options {
-
-        flex-direction: column;
-
-    }
-
-
-    .main-header {
-
-        padding:
-            15px;
-
-    }
-
-
-    .main-header h1 {
-
-        font-size: 19px;
-
-    }
-
-
-    .chat-box {
-
-        padding:
-            15px;
-
-    }
-
+.tool-button:hover {
+    background:
+        #344b70;
 }
 
 
-@media (max-width: 650px) {
+.tool-button.active-mode {
+    background:
+        #3864ba;
+}
+
+
+/* ============================================================
+   MAIN AREA
+   ============================================================ */
+
+.main {
+    margin-left:
+        360px;
+
+    width:
+        calc(100% - 360px);
+
+    min-height:
+        100vh;
+
+    display: flex;
+
+    flex-direction: column;
+}
+
+
+/* ============================================================
+   TOP HEADER
+   ============================================================ */
+
+.header {
+    background:
+        white;
+
+    padding:
+        30px 38px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    border-bottom:
+        1px solid #dce3ed;
+
+    position: sticky;
+
+    top: 0;
+
+    z-index: 10;
+}
+
+
+.header-left {
+    display: flex;
+
+    align-items: center;
+
+    gap: 15px;
+}
+
+
+.header-icon {
+    font-size: 36px;
+}
+
+
+.header h1 {
+    font-size: 30px;
+
+    color:
+        #24498f;
+
+    margin-bottom: 6px;
+}
+
+
+.header p {
+    color:
+        #697586;
+
+    font-size: 16px;
+}
+
+
+.mode-badge {
+    background:
+        #e8f0ff;
+
+    color:
+        #24498f;
+
+    padding:
+        13px 20px;
+
+    border-radius:
+        30px;
+
+    font-weight:
+        700;
+
+    font-size:
+        15px;
+}
+
+
+/* ============================================================
+   CONTENT
+   ============================================================ */
+
+.content {
+    flex:
+        1;
+
+    padding:
+        30px 38px 45px;
+
+    max-width:
+        1500px;
+
+    width:
+        100%;
+
+    margin:
+        0 auto;
+}
+
+
+/* ============================================================
+   ANSWER CARD
+   ============================================================ */
+
+.answer-card {
+    background:
+        white;
+
+    border-radius:
+        15px;
+
+    box-shadow:
+        0 5px 25px
+        rgba(
+            32,
+            50,
+            80,
+            0.07
+        );
+
+    border:
+        1px solid #e0e6ef;
+
+    padding:
+        25px;
+
+    margin-bottom:
+        25px;
+}
+
+
+/* ============================================================
+   ANSWER BOX
+   ============================================================ */
+
+#answerBox,
+.ai-answer {
+    color:
+        #263244;
+
+    font-size:
+        16px;
+
+    line-height:
+        1.75;
+
+    word-wrap:
+        break-word;
+}
+
+
+/* ============================================================
+   ANSWER HEADINGS
+   ============================================================ */
+
+#answerBox h2,
+.ai-answer h2 {
+    color:
+        #24498f;
+
+    font-size:
+        24px;
+
+    font-weight:
+        750;
+
+    margin:
+        25px 0 12px;
+
+    padding-bottom:
+        8px;
+
+    border-bottom:
+        1px solid #e1e7ef;
+}
+
+
+#answerBox h2:first-child,
+.ai-answer h2:first-child {
+    margin-top:
+        0;
+}
+
+
+#answerBox h3,
+.ai-answer h3 {
+    color:
+        #315ca7;
+
+    font-size:
+        20px;
+
+    font-weight:
+        750;
+
+    margin:
+        22px 0 9px;
+
+    padding:
+        5px 0;
+}
+
+
+#answerBox h4,
+.ai-answer h4 {
+    color:
+        #3c4f6d;
+
+    font-size:
+        17px;
+
+    font-weight:
+        700;
+
+    margin:
+        18px 0 7px;
+}
+
+
+/* ============================================================
+   ANSWER PARAGRAPHS
+   ============================================================ */
+
+#answerBox p,
+.ai-answer p {
+    margin:
+        9px 0;
+
+    line-height:
+        1.75;
+}
+
+
+/* ============================================================
+   BOLD
+   ============================================================ */
+
+#answerBox strong,
+.ai-answer strong {
+    color:
+        #182f5c;
+
+    font-weight:
+        750;
+}
+
+
+/* ============================================================
+   UNORDERED LIST
+   ============================================================ */
+
+#answerBox ul,
+.ai-answer ul {
+    margin:
+        12px 0 18px 8px;
+
+    padding-left:
+        25px;
+}
+
+
+#answerBox ul li,
+.ai-answer ul li {
+    margin:
+        9px 0;
+
+    padding-left:
+        5px;
+
+    line-height:
+        1.65;
+}
+
+
+/* ============================================================
+   ORDERED LIST
+   ============================================================ */
+
+#answerBox ol,
+.ai-answer ol {
+    margin:
+        12px 0 18px 8px;
+
+    padding-left:
+        28px;
+}
+
+
+#answerBox ol li,
+.ai-answer ol li {
+    margin:
+        9px 0;
+
+    padding-left:
+        5px;
+
+    line-height:
+        1.65;
+}
+
+
+/* ============================================================
+   INLINE CODE
+   ============================================================ */
+
+#answerBox code,
+.ai-answer code {
+    background:
+        #eef2f7;
+
+    color:
+        #263f6d;
+
+    padding:
+        2px 6px;
+
+    border-radius:
+        5px;
+
+    font-family:
+        Consolas,
+        monospace;
+
+    font-size:
+        14px;
+}
+
+
+/* ============================================================
+   WELCOME ANSWER
+   ============================================================ */
+
+.welcome-answer {
+    padding:
+        15px 5px;
+}
+
+
+.welcome-icon {
+    font-size:
+        32px;
+
+    margin-bottom:
+        8px;
+}
+
+
+.welcome-answer h3 {
+    color:
+        #263b61;
+
+    font-size:
+        22px;
+
+    margin-bottom:
+        10px;
+}
+
+
+.welcome-answer p {
+    color:
+        #657287;
+
+    margin:
+        7px 0;
+}
+
+
+/* ============================================================
+   LOADING
+   ============================================================ */
+
+.loading-answer {
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    gap:
+        15px;
+
+    padding:
+        15px;
+
+    color:
+        #536174;
+}
+
+
+.loading-answer strong {
+    display:
+        block;
+
+    color:
+        #24498f;
+
+    margin-bottom:
+        3px;
+}
+
+
+.loading-answer span {
+    display:
+        block;
+
+    font-size:
+        13px;
+}
+
+
+/* ============================================================
+   LOADING SPINNER
+   ============================================================ */
+
+.loading-spinner {
+    width:
+        35px;
+
+    height:
+        35px;
+
+    border:
+        4px solid #dfe7f3;
+
+    border-top:
+        4px solid #3864ba;
+
+    border-radius:
+        50%;
+
+    animation:
+        spin 0.8s linear infinite;
+}
+
+
+@keyframes spin {
+
+    0% {
+        transform:
+            rotate(0deg);
+    }
+
+    100% {
+        transform:
+            rotate(360deg);
+    }
+}
+
+
+/* ============================================================
+   ERROR
+   ============================================================ */
+
+.answer-error {
+    background:
+        #fff3f3;
+
+    border:
+        1px solid #f0caca;
+
+    border-left:
+        5px solid #d64545;
+
+    padding:
+        16px;
+
+    border-radius:
+        9px;
+
+    color:
+        #7c2d2d;
+}
+
+
+.answer-error strong {
+    color:
+        #b52f2f;
+}
+
+
+.answer-error p {
+    margin-top:
+        6px;
+}
+
+
+/* ============================================================
+   QUESTION AREA
+   ============================================================ */
+
+.question-section {
+    background:
+        transparent;
+
+    margin-top:
+        10px;
+}
+
+
+.question-row {
+    display:
+        flex;
+
+    gap:
+        12px;
+
+    align-items:
+        stretch;
+}
+
+
+#questionInput {
+    flex:
+        1;
+
+    min-height:
+        62px;
+
+    border:
+        2px solid #cbd7e8;
+
+    border-radius:
+        14px;
+
+    background:
+        white;
+
+    padding:
+        17px 20px;
+
+    font-size:
+        17px;
+
+    color:
+        #243247;
+
+    outline:
+        none;
+
+    transition:
+        0.2s ease;
+}
+
+
+#questionInput:focus {
+    border-color:
+        #3864ba;
+
+    box-shadow:
+        0 0 0 3px
+        rgba(
+            56,
+            100,
+            186,
+            0.1
+        );
+}
+
+
+#questionInput::placeholder {
+    color:
+        #7b8797;
+}
+
+
+/* ============================================================
+   SEND BUTTON
+   ============================================================ */
+
+#sendButton {
+    min-width:
+        130px;
+
+    border:
+        none;
+
+    border-radius:
+        13px;
+
+    background:
+        #315ca9;
+
+    color:
+        white;
+
+    font-size:
+        17px;
+
+    font-weight:
+        750;
+
+    padding:
+        0 25px;
+
+    cursor:
+        pointer;
+
+    transition:
+        0.2s ease;
+}
+
+
+#sendButton:hover {
+    background:
+        #24498f;
+
+    transform:
+        translateY(-1px);
+}
+
+
+#sendButton:disabled {
+    opacity:
+        0.6;
+
+    cursor:
+        not-allowed;
+
+    transform:
+        none;
+}
+
+
+/* ============================================================
+   ACTION BUTTONS
+   ============================================================ */
+
+.action-buttons {
+    display:
+        grid;
+
+    grid-template-columns:
+        repeat(
+            3,
+            1fr
+        );
+
+    gap:
+        14px;
+
+    margin-top:
+        14px;
+}
+
+
+.action-button {
+    border:
+        none;
+
+    border-radius:
+        11px;
+
+    background:
+        #344660;
+
+    color:
+        white;
+
+    padding:
+        16px;
+
+    font-size:
+        16px;
+
+    font-weight:
+        700;
+
+    cursor:
+        pointer;
+
+    transition:
+        0.2s ease;
+}
+
+
+.action-button:hover {
+    background:
+        #263952;
+}
+
+
+.action-button.active-mode {
+    background:
+        #315ca9;
+}
+
+
+/* ============================================================
+   PDF UPLOAD
+   ============================================================ */
+
+.pdf-upload-area {
+    background:
+        white;
+
+    border:
+        1px solid #dce4ef;
+
+    border-radius:
+        13px;
+
+    padding:
+        18px;
+
+    margin-top:
+        15px;
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    gap:
+        12px;
+
+    flex-wrap:
+        wrap;
+}
+
+
+.pdf-upload-area input[type="file"] {
+    flex:
+        1;
+
+    min-width:
+        220px;
+
+    padding:
+        9px;
+
+    border:
+        1px solid #ccd6e4;
+
+    border-radius:
+        8px;
+
+    background:
+        #f8fafc;
+}
+
+
+#uploadPdfButton {
+    border:
+        none;
+
+    background:
+        #315ca9;
+
+    color:
+        white;
+
+    padding:
+        11px 18px;
+
+    border-radius:
+        8px;
+
+    font-weight:
+        700;
+
+    cursor:
+        pointer;
+}
+
+
+#uploadPdfButton:hover {
+    background:
+        #24498f;
+}
+
+
+#uploadPdfButton:disabled {
+    opacity:
+        0.6;
+
+    cursor:
+        not-allowed;
+}
+
+
+/* ============================================================
+   STATUS
+   ============================================================ */
+
+.status {
+    text-align:
+        center;
+
+    margin-top:
+        12px;
+
+    color:
+        #6a7687;
+
+    font-size:
+        14px;
+}
+
+
+/* ============================================================
+   SCROLLBARS
+   ============================================================ */
+
+.sidebar::-webkit-scrollbar,
+.history-list::-webkit-scrollbar {
+    width:
+        7px;
+}
+
+
+.sidebar::-webkit-scrollbar-thumb,
+.history-list::-webkit-scrollbar-thumb {
+    background:
+        rgba(
+            255,
+            255,
+            255,
+            0.18
+        );
+
+    border-radius:
+        10px;
+}
+
+
+/* ============================================================
+   RESPONSIVE - TABLET
+   ============================================================ */
+
+@media (
+    max-width: 1000px
+) {
 
     .sidebar {
+        width:
+            270px;
 
-        display: none;
-
+        min-width:
+            270px;
     }
 
+    .main {
+        margin-left:
+            270px;
 
-    .feature-buttons {
-
-        flex-direction: column;
-
+        width:
+            calc(
+                100% - 270px
+            );
     }
 
-
-    .welcome-card {
-
-        margin: 20px auto;
-
-        padding: 22px;
-
+    .header {
+        padding:
+            25px;
     }
 
+    .content {
+        padding:
+            25px;
+    }
+
+    .action-buttons {
+        grid-template-columns:
+            1fr;
+    }
+}
+
+
+/* ============================================================
+   RESPONSIVE - MOBILE
+   ============================================================ */
+
+@media (
+    max-width: 700px
+) {
+
+    .app {
+        display:
+            block;
+    }
+
+    .sidebar {
+        position:
+            relative;
+
+        width:
+            100%;
+
+        min-width:
+            100%;
+
+        height:
+            auto;
+
+        max-height:
+            none;
+    }
+
+    .main {
+        margin-left:
+            0;
+
+        width:
+            100%;
+    }
+
+    .header {
+        padding:
+            20px;
+
+        flex-direction:
+            column;
+
+        align-items:
+            flex-start;
+
+        gap:
+            15px;
+    }
+
+    .header h1 {
+        font-size:
+            24px;
+    }
+
+    .content {
+        padding:
+            18px;
+    }
+
+    .question-row {
+        flex-direction:
+            column;
+    }
+
+    #sendButton {
+        min-height:
+            55px;
+    }
+
+    .action-buttons {
+        grid-template-columns:
+            1fr;
+    }
+
+    .answer-card {
+        padding:
+            18px;
+    }
+}
+
+
+/* ============================================================
+   SMALL MOBILE
+   ============================================================ */
+
+@media (
+    max-width: 450px
+) {
+
+    .logo {
+        padding:
+            8px 5px 20px;
+    }
+
+    .header-icon {
+        font-size:
+            28px;
+    }
+
+    .header h1 {
+        font-size:
+            21px;
+    }
+
+    .header p {
+        font-size:
+            14px;
+    }
+
+    #questionInput {
+        font-size:
+            15px;
+    }
+
+    #answerBox,
+    .ai-answer {
+        font-size:
+            15px;
+    }
 }

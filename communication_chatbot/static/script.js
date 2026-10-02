@@ -1,974 +1,1089 @@
-// =========================================================
-// CURRENT MODE
-// =========================================================
+// ============================================================
+// COMMUNICATION SYSTEMS AI - SCRIPT.JS
+// ============================================================
 
-let currentMode = "pdf";
+document.addEventListener("DOMContentLoaded", () => {
 
+    const questionInput = document.getElementById("questionInput");
+    const sendButton = document.getElementById("sendButton");
+    const answerBox = document.getElementById("answerBox");
 
-// =========================================================
-// HISTORY
-// =========================================================
+    const uploadInput = document.getElementById("pdfInput");
+    const uploadButton = document.getElementById("uploadPdfButton");
 
-let searchHistory =
-    JSON.parse(
-        localStorage.getItem("communicationHistory")
-    ) || [];
+    const internetButton = document.getElementById("internetButton");
+    const pdfButton = document.getElementById("pdfButton");
 
+    const newChatButton = document.getElementById("newChatButton");
+    const clearHistoryButton =
+        document.getElementById("clearHistoryButton");
 
-// =========================================================
-// PAGE LOAD
-// =========================================================
+    const historyList = document.getElementById("historyList");
+    const statusText = document.getElementById("statusText");
+    const modeBadge = document.getElementById("modeBadge");
 
-document.addEventListener(
-    "DOMContentLoaded",
-    function () {
+    const pdfUploadArea =
+        document.getElementById("pdfUploadArea");
 
-        loadHistory();
+    const pdfFileName =
+        document.getElementById("pdfFileName");
 
-        updateModeDisplay();
+    let currentMode = "internet";
+    let pdfUploaded = false;
 
-    }
-);
-
-
-
-// =========================================================
-// ADD MESSAGE
-// =========================================================
-
-function addMessage(message, sender) {
-
-    const chatBox =
-        document.getElementById("chat-box");
-
-
-    const messageDiv =
-        document.createElement("div");
-
-
-    if (sender === "user") {
-
-        messageDiv.className =
-            "user-message";
-
-
-        messageDiv.innerHTML = `
-            <strong>You</strong>
-            <p>${escapeHTML(message)}</p>
-        `;
-
-    } else {
-
-        messageDiv.className =
-            "bot-message";
-
-
-        messageDiv.innerHTML = `
-            <strong>🤖 AI Assistant</strong>
-            <p>${message}</p>
-        `;
-
-    }
-
-
-    chatBox.appendChild(
-        messageDiv
+    let searchHistory = JSON.parse(
+        localStorage.getItem(
+            "communicationSearchHistory"
+        ) || "[]"
     );
 
 
-    chatBox.scrollTop =
-        chatBox.scrollHeight;
-}
+    // ========================================================
+    // ESCAPE HTML
+    // ========================================================
 
+    function escapeHTML(text) {
 
-
-// =========================================================
-// ESCAPE HTML
-// =========================================================
-
-function escapeHTML(text) {
-
-    const div =
-        document.createElement("div");
-
-    div.textContent = text;
-
-    return div.innerHTML;
-}
-
-
-
-// =========================================================
-// SAVE HISTORY
-// =========================================================
-
-function saveToHistory(question) {
-
-    question =
-        question.trim();
-
-
-    if (!question) {
-
-        return;
+        return String(text)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
     }
 
 
-    // Remove duplicate question
-    searchHistory =
-        searchHistory.filter(
-            item => item !== question
+    // ========================================================
+    // INLINE MARKDOWN
+    // ========================================================
+
+    function formatInlineMarkdown(text) {
+
+        text = text.replace(
+            /\*\*(.*?)\*\*/g,
+            "<strong>$1</strong>"
         );
 
-
-    // Put newest question first
-    searchHistory.unshift(
-        question
-    );
-
-
-    // Keep last 50 questions
-    searchHistory =
-        searchHistory.slice(
-            0,
-            50
+        text = text.replace(
+            /(?<!\*)\*([^*]+)\*(?!\*)/g,
+            "<em>$1</em>"
         );
 
-
-    localStorage.setItem(
-        "communicationHistory",
-        JSON.stringify(searchHistory)
-    );
-
-
-    loadHistory();
-}
-
-
-
-// =========================================================
-// LOAD HISTORY
-// =========================================================
-
-function loadHistory() {
-
-    const historyList =
-        document.getElementById(
-            "history-list"
+        text = text.replace(
+            /`([^`]+)`/g,
+            "<code>$1</code>"
         );
 
-
-    if (!historyList) {
-
-        return;
+        return text;
     }
 
 
-    historyList.innerHTML = "";
+    // ========================================================
+    // FORMAT AI ANSWER
+    // ========================================================
+
+    function formatAIAnswer(text) {
+
+        if (!text) {
+            return "";
+        }
+
+        text = String(text)
+            .replace(/\r\n/g, "\n")
+            .replace(/\r/g, "\n");
 
 
-    if (searchHistory.length === 0) {
+        // ----------------------------------------------------
+        // Protect display math
+        // ----------------------------------------------------
 
-        historyList.innerHTML = `
-            <div class="history-empty">
-                No questions yet.
-            </div>
-        `;
+        const mathBlocks = [];
 
-        return;
-    }
+        text = text.replace(
+            /\$\$([\s\S]*?)\$\$/g,
+            function(match) {
+
+                const id =
+                    `MATHBLOCK${mathBlocks.length}END`;
+
+                mathBlocks.push(match);
+
+                return `\n${id}\n`;
+            }
+        );
 
 
-    searchHistory.forEach(
-        function (question) {
+        text = text.replace(
+            /\\\[([\s\S]*?)\\\]/g,
+            function(match) {
 
-            const button =
-                document.createElement(
-                    "button"
+                const id =
+                    `MATHBLOCK${mathBlocks.length}END`;
+
+                mathBlocks.push(match);
+
+                return `\n${id}\n`;
+            }
+        );
+
+
+        // ----------------------------------------------------
+        // Protect inline math
+        // ----------------------------------------------------
+
+        const inlineMath = [];
+
+        text = text.replace(
+            /\$([^\n$]+?)\$/g,
+            function(match) {
+
+                const id =
+                    `MATHINLINE${inlineMath.length}END`;
+
+                inlineMath.push(match);
+
+                return id;
+            }
+        );
+
+
+        text = text.replace(
+            /\\\((.*?)\\\)/g,
+            function(match) {
+
+                const id =
+                    `MATHINLINE${inlineMath.length}END`;
+
+                inlineMath.push(match);
+
+                return id;
+            }
+        );
+
+
+        // ----------------------------------------------------
+        // Separate headings
+        // ----------------------------------------------------
+
+        text = text.replace(
+            /\s+(#{1,6})\s+/g,
+            "\n$1 "
+        );
+
+
+        // ----------------------------------------------------
+        // Separate bullets
+        // ----------------------------------------------------
+
+        text = text.replace(
+            /\s+\*\s+(?=\*\*)/g,
+            "\n* "
+        );
+
+        text = text.replace(
+            /\s+-\s+(?=\*\*)/g,
+            "\n- "
+        );
+
+        text = text.replace(
+            /\s+•\s+/g,
+            "\n• "
+        );
+
+
+        // ----------------------------------------------------
+        // Numbered lists
+        // ----------------------------------------------------
+
+        text = text.replace(
+            /\s+(\d+\.)\s+/g,
+            "\n$1 "
+        );
+
+
+        // ----------------------------------------------------
+        // Common sections
+        // ----------------------------------------------------
+
+        const sections = [
+
+            "Key Components",
+            "Primary Objectives",
+            "Main Components",
+            "Components",
+            "How It Works",
+            "Working",
+            "Advantages",
+            "Applications",
+            "Features",
+            "Important Points",
+            "Conclusion",
+            "Summary",
+            "Types",
+            "Examples",
+            "Characteristics",
+            "Functions",
+            "Formula",
+            "Formulas",
+            "Definition",
+            "Principle"
+
+        ];
+
+
+        sections.forEach(section => {
+
+            const escaped =
+                section.replace(
+                    /[.*+?^${}()|[\]\\]/g,
+                    "\\$&"
                 );
 
 
-            button.className =
-                "history-item";
+            const regex =
+                new RegExp(
+                    "\\s+(" +
+                    escaped +
+                    ")\\s*:?\\s*",
+                    "gi"
+                );
 
 
-            button.textContent =
-                "💬 " + question;
-
-
-            button.onclick =
-                function () {
-
-                    reuseHistoryQuestion(
-                        question
-                    );
-
-                };
-
-
-            historyList.appendChild(
-                button
+            text = text.replace(
+                regex,
+                "\n### $1\n"
             );
 
+        });
+
+
+        text = text.replace(
+            /\n{3,}/g,
+            "\n\n"
+        );
+
+
+        // ----------------------------------------------------
+        // Escape HTML
+        // ----------------------------------------------------
+
+        text = escapeHTML(text);
+
+
+        // ----------------------------------------------------
+        // Restore formulas
+        // ----------------------------------------------------
+
+        mathBlocks.forEach(
+            (formula, index) => {
+
+                text = text.replace(
+                    `MATHBLOCK${index}END`,
+                    formula
+                );
+
+            }
+        );
+
+
+        inlineMath.forEach(
+            (formula, index) => {
+
+                text = text.replace(
+                    `MATHINLINE${index}END`,
+                    formula
+                );
+
+            }
+        );
+
+
+        // ----------------------------------------------------
+        // Convert lines
+        // ----------------------------------------------------
+
+        const lines = text.split("\n");
+
+        let html = "";
+
+        let inList = false;
+        let listType = null;
+
+
+        function closeList() {
+
+            if (inList) {
+
+                html +=
+                    listType === "ordered"
+                        ? "</ol>"
+                        : "</ul>";
+
+                inList = false;
+                listType = null;
+            }
         }
-    );
-}
 
 
+        for (let rawLine of lines) {
 
-// =========================================================
-// REUSE HISTORY QUESTION
-// =========================================================
+            const line = rawLine.trim();
 
-function reuseHistoryQuestion(question) {
 
-    const input =
-        document.getElementById(
-            "user-input"
-        );
+            if (!line) {
+                continue;
+            }
 
 
-    input.value =
-        question;
+            // Heading
+            if (line.startsWith("### ")) {
 
+                closeList();
 
-    input.focus();
+                html +=
+                    `<h3>${formatInlineMarkdown(
+                        line.substring(4)
+                    )}</h3>`;
 
-}
+                continue;
+            }
 
 
+            if (line.startsWith("## ")) {
 
-// =========================================================
-// CLEAR HISTORY
-// =========================================================
+                closeList();
 
-function clearHistory() {
+                html +=
+                    `<h2>${formatInlineMarkdown(
+                        line.substring(3)
+                    )}</h2>`;
 
-    const confirmed =
-        confirm(
-            "Clear all search history?"
-        );
+                continue;
+            }
 
 
-    if (!confirmed) {
+            if (line.startsWith("# ")) {
 
-        return;
-    }
+                closeList();
 
+                html +=
+                    `<h2>${formatInlineMarkdown(
+                        line.substring(2)
+                    )}</h2>`;
 
-    searchHistory = [];
+                continue;
+            }
 
 
-    localStorage.removeItem(
-        "communicationHistory"
-    );
+            // Bullet
+            if (
+                line.startsWith("- ") ||
+                line.startsWith("* ") ||
+                line.startsWith("• ")
+            ) {
 
+                if (
+                    !inList ||
+                    listType !== "unordered"
+                ) {
 
-    loadHistory();
+                    closeList();
 
-}
+                    html += "<ul>";
 
+                    inList = true;
+                    listType = "unordered";
+                }
 
 
-// =========================================================
-// NEW CHAT
-// =========================================================
+                let item = line.substring(2);
 
-function newChat() {
 
-    const chatBox =
-        document.getElementById(
-            "chat-box"
-        );
+                html +=
+                    `<li>${formatInlineMarkdown(
+                        item
+                    )}</li>`;
 
+                continue;
+            }
 
-    chatBox.innerHTML = `
 
-        <div class="welcome-card">
-
-            <div class="welcome-icon">
-                📡
-            </div>
-
-            <h2>
-                New Chat
-            </h2>
-
-            <p>
-                Ask a Communication Systems question.
-            </p>
-
-        </div>
-
-    `;
-
-
-    document.getElementById(
-        "user-input"
-    ).value = "";
-
-}
-
-
-
-// =========================================================
-// INTERNET MODE
-// =========================================================
-
-function selectInternetMode() {
-
-    currentMode =
-        "internet";
-
-
-    updateModeDisplay();
-
-
-    document.getElementById(
-        "user-input"
-    ).placeholder =
-        "Ask a Communication Systems question...";
-
-
-    setStatus(
-        "🌐 Internet Q&A selected"
-    );
-
-}
-
-
-
-// =========================================================
-// PDF MODE
-// =========================================================
-
-function selectPDFMode() {
-
-    currentMode =
-        "pdf";
-
-
-    updateModeDisplay();
-
-
-    document.getElementById(
-        "user-input"
-    ).placeholder =
-        "Ask a question from the uploaded PDF...";
-
-
-    setStatus(
-        "📄 PDF Q&A selected"
-    );
-
-}
-
-
-
-// =========================================================
-// UPDATE MODE
-// =========================================================
-
-function updateModeDisplay() {
-
-    const badge =
-        document.getElementById(
-            "mode-badge"
-        );
-
-
-    if (!badge) {
-
-        return;
-    }
-
-
-    if (currentMode === "internet") {
-
-        badge.innerHTML =
-            "🌐 Internet Q&A";
-
-    } else {
-
-        badge.innerHTML =
-            "📄 PDF Q&A";
-
-    }
-
-}
-
-
-
-// =========================================================
-// STATUS
-// =========================================================
-
-function setStatus(message) {
-
-    const status =
-        document.getElementById(
-            "status-message"
-        );
-
-
-    if (status) {
-
-        status.textContent =
-            message;
-
-    }
-
-}
-
-
-
-// =========================================================
-// SEND MESSAGE
-// =========================================================
-
-function sendMessage() {
-
-    const input =
-        document.getElementById(
-            "user-input"
-        );
-
-
-    const question =
-        input.value.trim();
-
-
-    if (!question) {
-
-        return;
-    }
-
-
-    // Save question
-    saveToHistory(
-        question
-    );
-
-
-    // Display question
-    addMessage(
-        question,
-        "user"
-    );
-
-
-    input.value = "";
-
-
-    // Select mode
-    if (
-        currentMode === "internet"
-    ) {
-
-        askInternet(
-            question
-        );
-
-    } else {
-
-        askPDF(
-            question
-        );
-
-    }
-
-}
-
-
-
-// =========================================================
-// UPLOAD PDF
-// =========================================================
-
-function uploadPDF() {
-
-    const fileInput =
-        document.getElementById(
-            "pdf-input"
-        );
-
-
-    const file =
-        fileInput.files[0];
-
-
-    if (!file) {
-
-        return;
-    }
-
-
-    if (
-        !file.name
-            .toLowerCase()
-            .endsWith(".pdf")
-    ) {
-
-        addMessage(
-            "❌ Please select a PDF file.",
-            "bot"
-        );
-
-        return;
-    }
-
-
-    const formData =
-        new FormData();
-
-
-    formData.append(
-        "pdf",
-        file
-    );
-
-
-    addMessage(
-        "📄 Uploading <b>" +
-        escapeHTML(file.name) +
-        "</b>...",
-        "bot"
-    );
-
-
-    setStatus(
-        "Uploading PDF..."
-    );
-
-
-    fetch(
-        "/upload_pdf",
-        {
-
-            method: "POST",
-
-            body: formData
-
-        }
-    )
-
-    .then(
-        response =>
-            response.json()
-    )
-
-    .then(
-        data => {
-
-            if (data.success) {
-
-                addMessage(
-
-                    "✅ " +
-                    escapeHTML(
-                        data.message
-                    ) +
-                    "<br><br>" +
-                    "Now click <b>📄 PDF Q&A</b> and ask your question.",
-
-                    "bot"
-
+            // Numbered list
+            const numberMatch =
+                line.match(
+                    /^(\d+)\.\s+(.*)$/
                 );
 
 
-                selectPDFMode();
+            if (numberMatch) {
+
+                if (
+                    !inList ||
+                    listType !== "ordered"
+                ) {
+
+                    closeList();
+
+                    html += "<ol>";
+
+                    inList = true;
+                    listType = "ordered";
+                }
 
 
-                setStatus(
-                    "PDF ready for questions"
+                html +=
+                    `<li>${formatInlineMarkdown(
+                        numberMatch[2]
+                    )}</li>`;
+
+                continue;
+            }
+
+
+            // Normal paragraph
+            closeList();
+
+            html +=
+                `<p>${formatInlineMarkdown(
+                    line
+                )}</p>`;
+        }
+
+
+        closeList();
+
+        return html;
+    }
+
+
+    // ========================================================
+    // MATHJAX
+    // ========================================================
+
+    function renderMath() {
+
+        if (
+            window.MathJax &&
+            answerBox
+        ) {
+
+            MathJax.typesetClear(
+                [answerBox]
+            );
+
+            MathJax.typesetPromise(
+                [answerBox]
+            ).catch(error => {
+
+                console.error(
+                    "MathJax error:",
+                    error
+                );
+
+            });
+        }
+    }
+
+
+    // ========================================================
+    // SHOW ANSWER
+    // ========================================================
+
+    function showAnswer(answer) {
+
+        answerBox.innerHTML =
+            formatAIAnswer(answer);
+
+
+        setTimeout(() => {
+
+            renderMath();
+
+        }, 20);
+    }
+
+
+    // ========================================================
+    // LOADING
+    // ========================================================
+
+    function showLoading() {
+
+        answerBox.innerHTML = `
+
+            <div class="loading-answer">
+
+                <div class="loading-spinner"></div>
+
+                <div>
+
+                    <strong>
+                        AI is thinking...
+                    </strong>
+
+                    <span>
+                        Finding the most relevant information.
+                    </span>
+
+                </div>
+
+            </div>
+
+        `;
+    }
+
+
+    // ========================================================
+    // ERROR
+    // ========================================================
+
+    function showError(message) {
+
+        answerBox.innerHTML = `
+
+            <div class="answer-error">
+
+                <strong>
+                    ⚠️ Error
+                </strong>
+
+                <p>
+                    ${escapeHTML(message)}
+                </p>
+
+            </div>
+
+        `;
+    }
+
+
+    // ========================================================
+    // HISTORY
+    // ========================================================
+
+    function addToHistory(question) {
+
+        if (!question.trim()) {
+            return;
+        }
+
+
+        searchHistory =
+            searchHistory.filter(
+                item => item !== question
+            );
+
+
+        searchHistory.unshift(
+            question
+        );
+
+
+        searchHistory =
+            searchHistory.slice(0, 20);
+
+
+        localStorage.setItem(
+            "communicationSearchHistory",
+            JSON.stringify(searchHistory)
+        );
+
+
+        renderHistory();
+    }
+
+
+    function renderHistory() {
+
+        historyList.innerHTML = "";
+
+
+        if (searchHistory.length === 0) {
+
+            historyList.innerHTML = `
+
+                <div class="empty-history">
+                    No search history
+                </div>
+
+            `;
+
+            return;
+        }
+
+
+        searchHistory.forEach(
+            question => {
+
+                const item =
+                    document.createElement(
+                        "button"
+                    );
+
+
+                item.className =
+                    "history-item";
+
+
+                item.type = "button";
+
+
+                item.textContent =
+                    question;
+
+
+                item.addEventListener(
+                    "click",
+                    () => {
+
+                        questionInput.value =
+                            question;
+
+                        sendQuestion();
+
+                    }
+                );
+
+
+                historyList.appendChild(
+                    item
+                );
+
+            }
+        );
+    }
+
+
+    function clearHistory() {
+
+        searchHistory = [];
+
+        localStorage.removeItem(
+            "communicationSearchHistory"
+        );
+
+        renderHistory();
+    }
+
+
+    // ========================================================
+    // MODE
+    // ========================================================
+
+    function setMode(mode) {
+
+        currentMode = mode;
+
+
+        internetButton.classList.toggle(
+            "active-mode",
+            mode === "internet"
+        );
+
+
+        pdfButton.classList.toggle(
+            "active-mode",
+            mode === "pdf"
+        );
+
+
+        if (modeBadge) {
+
+            modeBadge.innerHTML =
+                mode === "internet"
+                    ? "🌐 Internet Q&amp;A"
+                    : "📄 PDF Q&amp;A";
+        }
+
+
+        if (mode === "internet") {
+
+            statusText.textContent =
+                "Internet Q&A mode";
+
+            pdfUploadArea.style.display =
+                "none";
+
+        } else {
+
+            statusText.textContent =
+                pdfUploaded
+                    ? "PDF Q&A mode"
+                    : "Select a PDF file";
+
+            pdfUploadArea.style.display =
+                "flex";
+        }
+    }
+
+
+    // ========================================================
+    // SEND QUESTION
+    // ========================================================
+
+    async function sendQuestion() {
+
+        const question =
+            questionInput.value.trim();
+
+
+        if (!question) {
+
+            showError(
+                "Please enter a question."
+            );
+
+            return;
+        }
+
+
+        if (
+            currentMode === "pdf" &&
+            !pdfUploaded
+        ) {
+
+            showError(
+                "Please upload a PDF first."
+            );
+
+            return;
+        }
+
+
+        addToHistory(question);
+
+        showLoading();
+
+        sendButton.disabled = true;
+
+
+        const endpoint =
+            currentMode === "pdf"
+                ? "/ask_pdf"
+                : "/ask_internet";
+
+
+        try {
+
+            const response =
+                await fetch(
+                    endpoint,
+                    {
+                        method: "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        body: JSON.stringify({
+                            question:
+                                question
+                        })
+                    }
+                );
+
+
+            if (!response.ok) {
+
+                throw new Error(
+                    `Server error: ${response.status}`
+                );
+            }
+
+
+            const data =
+                await response.json();
+
+
+            if (data.answer) {
+
+                showAnswer(
+                    data.answer
                 );
 
             } else {
 
-                addMessage(
-                    "❌ " +
-                    escapeHTML(
-                        data.message
-                    ),
-                    "bot"
+                showError(
+                    "No answer was returned."
                 );
-
-
-                setStatus(
-                    "PDF upload failed"
-                );
-
             }
 
+
+        } catch (error) {
+
+            console.error(
+                error
+            );
+
+
+            showError(
+                "Unable to connect to the server."
+            );
+
+
+        } finally {
+
+            sendButton.disabled = false;
         }
-    )
-
-    .catch(
-        error => {
-
-            addMessage(
-                "❌ Error uploading PDF: " +
-                escapeHTML(
-                    error.toString()
-                ),
-                "bot"
-            );
+    }
 
 
-            setStatus(
-                "Upload error"
-            );
+    // ========================================================
+    // OPEN FILE PICKER
+    // ========================================================
 
-        }
-    );
+    uploadButton.addEventListener(
+        "click",
+        () => {
 
+            // IMPORTANT:
+            // Open Windows file picker
 
-    fileInput.value = "";
-
-}
-
-
-
-// =========================================================
-// ASK PDF
-// =========================================================
-
-function askPDF(question) {
-
-    addMessage(
-        "🔎 Searching the uploaded PDF...",
-        "bot"
-    );
-
-
-    setStatus(
-        "Searching PDF..."
-    );
-
-
-    fetch(
-        "/ask_pdf",
-        {
-
-            method: "POST",
-
-            headers: {
-
-                "Content-Type":
-                    "application/json"
-
-            },
-
-            body: JSON.stringify({
-
-                question:
-                    question
-
-            })
-
-        }
-    )
-
-    .then(
-        response =>
-            response.json()
-    )
-
-    .then(
-        data => {
-
-            removeSearchingMessage(
-                "Searching the uploaded PDF"
-            );
-
-
-            addMessage(
-                data.answer,
-                "bot"
-            );
-
-
-            setStatus(
-                "Ready"
-            );
-
-        }
-    )
-
-    .catch(
-        error => {
-
-            removeSearchingMessage(
-                "Searching the uploaded PDF"
-            );
-
-
-            addMessage(
-                "❌ PDF error: " +
-                escapeHTML(
-                    error.toString()
-                ),
-                "bot"
-            );
-
-
-            setStatus(
-                "Error"
-            );
+            uploadInput.click();
 
         }
     );
 
-}
+
+    // ========================================================
+    // PDF SELECTED
+    // ========================================================
+
+    uploadInput.addEventListener(
+        "change",
+        async () => {
+
+            const file =
+                uploadInput.files[0];
 
 
+            if (!file) {
+                return;
+            }
 
-// =========================================================
-// ASK INTERNET
-// =========================================================
-
-function askInternet(question) {
-
-    addMessage(
-        "🌐 Searching the Internet...",
-        "bot"
-    );
-
-
-    setStatus(
-        "Searching Internet..."
-    );
-
-
-    fetch(
-        "/ask_internet",
-        {
-
-            method: "POST",
-
-            headers: {
-
-                "Content-Type":
-                    "application/json"
-
-            },
-
-            body: JSON.stringify({
-
-                question:
-                    question
-
-            })
-
-        }
-    )
-
-    .then(
-        response =>
-            response.json()
-    )
-
-    .then(
-        data => {
-
-            removeSearchingMessage(
-                "Searching the Internet"
-            );
-
-
-            addMessage(
-                data.answer,
-                "bot"
-            );
-
-
-            setStatus(
-                "Ready"
-            );
-
-        }
-    )
-
-    .catch(
-        error => {
-
-            removeSearchingMessage(
-                "Searching the Internet"
-            );
-
-
-            addMessage(
-                "❌ Internet error: " +
-                escapeHTML(
-                    error.toString()
-                ),
-                "bot"
-            );
-
-
-            setStatus(
-                "Internet search error"
-            );
-
-        }
-    );
-
-}
-
-
-
-// =========================================================
-// REMOVE SEARCH MESSAGE
-// =========================================================
-
-function removeSearchingMessage(
-    text
-) {
-
-    const messages =
-        document.querySelectorAll(
-            ".bot-message"
-        );
-
-
-    messages.forEach(
-        function (message) {
 
             if (
-                message.innerText.includes(
-                    text
-                )
+                !file.name
+                    .toLowerCase()
+                    .endsWith(".pdf")
             ) {
 
-                message.remove();
+                showError(
+                    "Please select a PDF file."
+                );
 
+                uploadInput.value = "";
+
+                return;
+            }
+
+
+            pdfFileName.textContent =
+                "Selected: " + file.name;
+
+
+            const formData =
+                new FormData();
+
+
+            formData.append(
+                "pdf",
+                file
+            );
+
+
+            uploadButton.disabled = true;
+
+
+            statusText.textContent =
+                "Uploading PDF...";
+
+
+            try {
+
+                const response =
+                    await fetch(
+                        "/upload_pdf",
+                        {
+                            method: "POST",
+                            body: formData
+                        }
+                    );
+
+
+                const data =
+                    await response.json();
+
+
+                if (data.success) {
+
+                    pdfUploaded = true;
+
+                    setMode("pdf");
+
+
+                    statusText.textContent =
+                        "PDF ready for questions";
+
+
+                    showAnswer(`
+
+### PDF Uploaded Successfully
+
+**File:** ${file.name}
+
+You can now ask questions about this PDF.
+
+The PDF Q&A mode answers questions using the uploaded document.
+
+                    `);
+
+                } else {
+
+                    showError(
+                        data.message ||
+                        "PDF upload failed."
+                    );
+
+                }
+
+
+            } catch (error) {
+
+                console.error(
+                    error
+                );
+
+
+                showError(
+                    "Unable to upload PDF."
+                );
+
+            } finally {
+
+                uploadButton.disabled =
+                    false;
             }
 
         }
     );
 
-}
+
+    // ========================================================
+    // NEW CHAT
+    // ========================================================
+
+    newChatButton.addEventListener(
+        "click",
+        () => {
+
+            questionInput.value = "";
+
+            pdfUploaded = false;
+
+            uploadInput.value = "";
+
+            pdfFileName.textContent =
+                "No PDF selected";
 
 
+            answerBox.innerHTML = `
 
-// =========================================================
-// CHATGPT
-// =========================================================
+                <div class="welcome-answer">
 
-function openChatGPT() {
+                    <div class="welcome-icon">
+                        🤖
+                    </div>
 
-    const input =
-        document.getElementById(
-            "user-input"
-        );
+                    <h3>
+                        AI Assistant
+                    </h3>
 
+                    <p>
+                        Ask a Communication Systems
+                        or Computer Networks question.
+                    </p>
 
-    const question =
-        input.value.trim();
+                    <p>
+                        Use Internet Q&A or upload
+                        a PDF and ask questions from
+                        the document.
+                    </p>
 
+                </div>
 
-    if (question) {
-
-        copyToClipboard(
-            question
-        );
-
-        alert(
-            "Your question has been copied.\n\n" +
-            "ChatGPT will open in a new tab.\n" +
-            "Paste the question there."
-        );
-
-    }
+            `;
 
 
-    window.open(
-        "https://chatgpt.com/",
-        "_blank"
+            setMode("internet");
+
+        }
     );
 
-}
 
+    // ========================================================
+    // BUTTONS
+    // ========================================================
 
-
-// =========================================================
-// GEMINI
-// =========================================================
-
-function openGemini() {
-
-    const input =
-        document.getElementById(
-            "user-input"
-        );
-
-
-    const question =
-        input.value.trim();
-
-
-    if (question) {
-
-        copyToClipboard(
-            question
-        );
-
-        alert(
-            "Your question has been copied.\n\n" +
-            "Gemini will open in a new tab.\n" +
-            "Paste the question there."
-        );
-
-    }
-
-
-    window.open(
-        "https://gemini.google.com/",
-        "_blank"
+    sendButton.addEventListener(
+        "click",
+        sendQuestion
     );
 
-}
+
+    internetButton.addEventListener(
+        "click",
+        () => {
+
+            setMode("internet");
+
+        }
+    );
 
 
+    pdfButton.addEventListener(
+        "click",
+        () => {
 
-// =========================================================
-// COPY TO CLIPBOARD
-// =========================================================
+            setMode("pdf");
 
-function copyToClipboard(text) {
-
-    if (
-        navigator.clipboard &&
-        navigator.clipboard.writeText
-    ) {
-
-        navigator.clipboard.writeText(
-            text
-        );
-
-    }
-
-}
+        }
+    );
 
 
+    clearHistoryButton.addEventListener(
+        "click",
+        clearHistory
+    );
 
-// =========================================================
-// ENTER KEY
-// =========================================================
 
-document
-    .getElementById("user-input")
-    .addEventListener(
-        "keypress",
-        function(event) {
+    // ========================================================
+    // ENTER KEY
+    // ========================================================
+
+    questionInput.addEventListener(
+        "keydown",
+        event => {
 
             if (
                 event.key === "Enter"
             ) {
 
-                sendMessage();
+                event.preventDefault();
+
+                sendQuestion();
 
             }
 
         }
     );
+
+
+    // ========================================================
+    // INITIALIZATION
+    // ========================================================
+
+    renderHistory();
+
+    setMode("internet");
+
+});
