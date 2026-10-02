@@ -1,270 +1,99 @@
+from flask import Flask, render_template, request, jsonify
+
+import fitz
 import os
 import re
-import html
 import requests
-import fitz
 
-from flask import Flask, render_template, request, jsonify
 from bs4 import BeautifulSoup
+from urllib.parse import quote, urljoin, unquote
 
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-# Gemini AI
-from google import genai
+# Gemini
+try:
+    from google import genai
+except ImportError:
+    genai = None
 
 
-# ============================================================
-# FLASK APPLICATION
-# ============================================================
+# =========================================================
+# FLASK APP
+# =========================================================
 
 app = Flask(__name__)
 
-app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024
 
-UPLOAD_FOLDER = "pdfs"
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-
-# ============================================================
-# GLOBAL PDF DATA
-# ============================================================
-
-PDF_TEXT = ""
-PDF_NAME = ""
-
-
-# ============================================================
-# GEMINI AI CONFIGURATION
-# ============================================================
+# =========================================================
+# GEMINI CONFIGURATION
+# =========================================================
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
+GEMINI_MODEL = "gemini-3.8-flash"
+
 gemini_client = None
 
-if GEMINI_API_KEY:
+if genai and GEMINI_API_KEY:
 
     try:
         gemini_client = genai.Client(
             api_key=GEMINI_API_KEY
         )
 
-        print("===================================")
-        print("Gemini AI initialized successfully.")
-        print("===================================")
+        print("Gemini client initialized.")
 
     except Exception as e:
 
-        print("Gemini initialization error:")
-        print(e)
-
-        gemini_client = None
+        print(
+            "Gemini initialization error:",
+            repr(e)
+        )
 
 else:
 
-    print("===================================")
-    print("WARNING: GEMINI_API_KEY not found.")
-    print("Gemini AI is disabled.")
-    print("===================================")
+    print(
+        "Gemini client not initialized."
+    )
 
 
-# Current Gemini model
-GEMINI_MODEL = "gemini-3.8-flash"
+# =========================================================
+# PDF DATA
+# =========================================================
+
+pdf_text = ""
+pdf_filename = ""
 
 
-# ============================================================
-# HOME PAGE
-# ============================================================
+# =========================================================
+# HOME
+# =========================================================
 
 @app.route("/")
 def home():
 
-    return render_template("index.html")
-
-
-# ============================================================
-# BASIC TEXT CLEANING
-# ============================================================
-
-def clean_text(text):
-
-    if not text:
-        return ""
-
-    text = html.unescape(text)
-
-    text = re.sub(
-        r"<[^>]+>",
-        " ",
-        text
+    return render_template(
+        "index.html"
     )
 
-    text = re.sub(
-        r"\s+",
-        " ",
-        text
-    )
 
-    return text.strip()
+# =========================================================
+# HEALTH CHECK
+# =========================================================
 
+@app.route("/health")
+def health():
 
-# ============================================================
-# INTERNET SEARCH TEXT CLEANING
-# ============================================================
-
-def clean_internet_text(text):
-
-    if not text:
-        return ""
-
-    text = html.unescape(text)
-
-    text = re.sub(
-        r"<[^>]+>",
-        " ",
-        text
-    )
-
-    # Remove URLs from snippets
-    text = re.sub(
-        r"https?://\S+",
-        " ",
-        text
-    )
-
-    # Remove standalone numbers
-    text = re.sub(
-        r"(?<!\w)\d+(?!\w)",
-        " ",
-        text
-    )
-
-    text = re.sub(
-        r"\s+",
-        " ",
-        text
-    )
-
-    return text.strip()
+    return jsonify({
+        "status": "ok",
+        "gemini": bool(gemini_client)
+    })
 
 
-# ============================================================
-# SPLIT INTO SENTENCES
-# ============================================================
-
-def split_sentences(text):
-
-    if not text:
-        return []
-
-    text = clean_text(text)
-
-    sentences = re.split(
-        r"(?<=[.!?])\s+",
-        text
-    )
-
-    result = []
-
-    for sentence in sentences:
-
-        sentence = sentence.strip()
-
-        if len(sentence) < 20:
-            continue
-
-        # Ignore only-number fragments
-        if re.fullmatch(
-            r"[\d\s\.\-\:\(\)]+",
-            sentence
-        ):
-            continue
-
-        result.append(sentence)
-
-    return result
-
-
-# ============================================================
-# TF-IDF RELEVANCE FILTER
-# ============================================================
-
-def get_relevant_text(
-    question,
-    documents,
-    top_n=6
-):
-
-    if not documents:
-        return ""
-
-    cleaned_documents = []
-
-    for document in documents:
-
-        document = clean_text(document)
-
-        if len(document) >= 20:
-
-            cleaned_documents.append(
-                document
-            )
-
-    if not cleaned_documents:
-        return ""
-
-    try:
-
-        vectorizer = TfidfVectorizer(
-            stop_words="english",
-            ngram_range=(1, 2)
-        )
-
-        all_text = [
-            question
-        ] + cleaned_documents
-
-        matrix = vectorizer.fit_transform(
-            all_text
-        )
-
-        question_vector = matrix[0]
-
-        document_vectors = matrix[1:]
-
-        similarities = cosine_similarity(
-            question_vector,
-            document_vectors
-        ).flatten()
-
-        ranked_indexes = (
-            similarities.argsort()[::-1]
-        )
-
-        selected = []
-
-        for index in ranked_indexes[:top_n]:
-
-            if similarities[index] > 0:
-
-                selected.append(
-                    cleaned_documents[index]
-                )
-
-        return "\n".join(selected)
-
-    except Exception as e:
-
-        print("TF-IDF error:", e)
-
-        return "\n".join(
-            cleaned_documents[:top_n]
-        )
-
-
-# ============================================================
-# GEMINI AI FUNCTION
-# ============================================================
+# =========================================================
+# GEMINI FUNCTION
+# =========================================================
 
 def ask_gemini(prompt):
 
@@ -278,10 +107,14 @@ def ask_gemini(prompt):
 
     try:
 
-        print("Sending request to Gemini...")
+        print(
+            "Sending request to Gemini..."
+        )
 
         response = gemini_client.models.generate_content(
+
             model=GEMINI_MODEL,
+
             contents=prompt
         )
 
@@ -294,7 +127,7 @@ def ask_gemini(prompt):
             return response.text.strip()
 
         print(
-            "Gemini returned an empty response."
+            "Gemini returned empty response."
         )
 
         return None
@@ -302,518 +135,1081 @@ def ask_gemini(prompt):
     except Exception as e:
 
         print(
-            "==================================="
-        )
-
-        print(
-            "Gemini API ERROR:"
-        )
-
-        print(
+            "Gemini API ERROR:",
             repr(e)
-        )
-
-        print(
-            "==================================="
         )
 
         return None
 
 
-# ============================================================
-# DUCKDUCKGO SEARCH
-# ============================================================
+# =========================================================
+# UPLOAD PDF
+# =========================================================
 
-def search_duckduckgo(question):
+@app.route(
+    "/upload_pdf",
+    methods=["POST"]
+)
+def upload_pdf():
 
-    results = []
+    global pdf_text
+    global pdf_filename
 
-    # --------------------------------------------------------
-    # METHOD 1 - DUCKDUCKGO API
-    # --------------------------------------------------------
+    if "pdf" not in request.files:
+
+        return jsonify({
+            "success": False,
+            "message":
+                "No PDF file selected."
+        })
+
+    file = request.files["pdf"]
+
+    if file.filename == "":
+
+        return jsonify({
+            "success": False,
+            "message":
+                "No PDF file selected."
+        })
+
+    if not file.filename.lower().endswith(".pdf"):
+
+        return jsonify({
+            "success": False,
+            "message":
+                "Please upload a PDF file."
+        })
+
+    pdf_filename = file.filename
+
+    os.makedirs(
+        "pdfs",
+        exist_ok=True
+    )
+
+    pdf_path = os.path.join(
+        "pdfs",
+        pdf_filename
+    )
 
     try:
 
-        url = (
-            "https://api.duckduckgo.com/"
+        file.save(pdf_path)
+
+        document = fitz.open(
+            pdf_path
         )
 
-        params = {
+        extracted_text = ""
 
-            "q": question,
+        for page in document:
 
-            "format": "json",
+            extracted_text += (
+                page.get_text("text")
+                + "\n"
+            )
 
-            "no_html": "1",
+        document.close()
 
-            "skip_disambig": "1"
-        }
+        pdf_text = extracted_text.strip()
+
+        if not pdf_text:
+
+            return jsonify({
+                "success": False,
+                "message":
+                    "Could not extract text from this PDF."
+            })
+
+        print(
+            "PDF loaded:",
+            pdf_filename
+        )
+
+        print(
+            "PDF characters:",
+            len(pdf_text)
+        )
+
+        return jsonify({
+
+            "success": True,
+
+            "message":
+                "PDF uploaded successfully: "
+                + pdf_filename
+        })
+
+    except Exception as e:
+
+        print(
+            "PDF ERROR:",
+            repr(e)
+        )
+
+        return jsonify({
+
+            "success": False,
+
+            "message":
+                "Error reading PDF: "
+                + str(e)
+        })
+
+
+# =========================================================
+# CLEAN TEXT
+# =========================================================
+
+def clean_text(text):
+
+    text = text.replace(
+        "\n",
+        " "
+    )
+
+    text = re.sub(
+        r"\s+",
+        " ",
+        text
+    )
+
+    return text.strip()
+
+
+# =========================================================
+# NORMALIZE TEXT
+# =========================================================
+
+def normalize_text(value):
+
+    value = value.lower()
+
+    value = re.sub(
+        r"[^a-z0-9\s]",
+        " ",
+        value
+    )
+
+    value = re.sub(
+        r"\s+",
+        " ",
+        value
+    )
+
+    return value.strip()
+
+
+# =========================================================
+# FIND DIRECT PDF ANSWER
+# =========================================================
+
+def find_direct_answer(question):
+
+    global pdf_text
+
+    if not pdf_text:
+
+        return None
+
+    text = clean_text(
+        pdf_text
+    )
+
+    normalized_text = normalize_text(
+        text
+    )
+
+    normalized_question = normalize_text(
+        question
+    )
+
+    search_question = re.sub(
+
+        r"^(please\s+)?"
+        r"(define|explain|describe|state|write|"
+        r"what\s+is|what\s+are|how\s+does|"
+        r"how\s+do|give|list)\s+",
+
+        "",
+
+        normalized_question
+    )
+
+    possible_phrases = [
+
+        normalized_question,
+
+        search_question
+    ]
+
+    possible_phrases = list(
+        dict.fromkeys(
+
+            [
+                p
+
+                for p in possible_phrases
+
+                if len(p) > 3
+            ]
+        )
+    )
+
+    question_position = -1
+
+    matched_phrase = ""
+
+    for phrase in possible_phrases:
+
+        position = normalized_text.find(
+            phrase
+        )
+
+        if position != -1:
+
+            question_position = position
+
+            matched_phrase = phrase
+
+            break
+
+    if question_position == -1:
+
+        return None
+
+    start_position = (
+
+        question_position
+
+        + len(matched_phrase)
+    )
+
+    remaining_text = text[
+        start_position:
+    ].strip()
+
+    next_question_pattern = re.compile(
+
+        r"\s+\d{1,3}\.\s+"
+    )
+
+    next_match = (
+        next_question_pattern.search(
+            remaining_text
+        )
+    )
+
+    if next_match:
+
+        answer = remaining_text[
+            :next_match.start()
+        ].strip()
+
+    else:
+
+        answer = remaining_text.strip()
+
+    answer = re.sub(
+
+        r"\s+Unit[- ]?\d+.*$",
+
+        "",
+
+        answer,
+
+        flags=re.IGNORECASE
+    )
+
+    answer = clean_text(
+        answer
+    )
+
+    if re.match(
+        r"^\d+\.\s*",
+        answer
+    ):
+
+        return None
+
+    if len(answer) < 10:
+
+        return None
+
+    return answer
+
+
+# =========================================================
+# PDF TF-IDF SEARCH
+# =========================================================
+
+def get_tfidf_answer(question):
+
+    global pdf_text
+
+    if not pdf_text:
+
+        return None
+
+    text = clean_text(
+        pdf_text
+    )
+
+    sentences = re.split(
+
+        r"(?<=[.!?])\s+",
+
+        text
+    )
+
+    sentences = [
+
+        sentence.strip()
+
+        for sentence in sentences
+
+        if len(sentence.strip()) > 15
+    ]
+
+    if not sentences:
+
+        return None
+
+    try:
+
+        vectorizer = TfidfVectorizer(
+
+            stop_words="english",
+
+            ngram_range=(1, 2)
+        )
+
+        vectors = vectorizer.fit_transform(
+
+            [question]
+
+            + sentences
+        )
+
+        question_vector = vectors[0]
+
+        sentence_vectors = vectors[1:]
+
+        similarities = cosine_similarity(
+
+            question_vector,
+
+            sentence_vectors
+        )[0]
+
+        ranked = sorted(
+
+            range(len(sentences)),
+
+            key=lambda i:
+                similarities[i],
+
+            reverse=True
+        )
+
+        best_index = ranked[0]
+
+        best_score = similarities[
+            best_index
+        ]
+
+        if best_score < 0.18:
+
+            return None
+
+        return sentences[
+            best_index
+        ].strip()
+
+    except Exception as e:
+
+        print(
+            "PDF TF-IDF error:",
+            repr(e)
+        )
+
+        return None
+
+
+# =========================================================
+# GET PDF ANSWER
+# =========================================================
+
+def get_pdf_answer(question):
+
+    global pdf_text
+
+    if not pdf_text:
+
+        return (
+            "❌ Please upload a PDF first."
+        )
+
+    if not question.strip():
+
+        return (
+            "Please enter a question."
+        )
+
+    direct_answer = (
+        find_direct_answer(
+            question
+        )
+    )
+
+    if direct_answer:
+
+        return direct_answer
+
+    fallback_answer = (
+        get_tfidf_answer(
+            question
+        )
+    )
+
+    if fallback_answer:
+
+        return fallback_answer
+
+    return (
+        "❌ This information was not found "
+        "in the uploaded PDF."
+    )
+
+
+# =========================================================
+# ASK PDF
+# =========================================================
+
+@app.route(
+    "/ask_pdf",
+    methods=["POST"]
+)
+def ask_pdf():
+
+    try:
+
+        data = request.get_json()
+
+        if not data:
+
+            return jsonify({
+
+                "answer":
+                    "Please enter a question."
+            })
+
+        question = data.get(
+            "question",
+            ""
+        ).strip()
+
+        if not question:
+
+            return jsonify({
+
+                "answer":
+                    "Please enter a question."
+            })
+
+        answer = get_pdf_answer(
+            question
+        )
+
+        return jsonify({
+
+            "answer": answer
+        })
+
+    except Exception as e:
+
+        print(
+            "PDF question error:",
+            repr(e)
+        )
+
+        return jsonify({
+
+            "answer":
+                "❌ PDF error: "
+                + str(e)
+        })
+
+
+# =========================================================
+# DUCKDUCKGO SEARCH
+# =========================================================
+
+def search_duckduckgo(query):
+
+    print(
+        "Searching DuckDuckGo:",
+        query
+    )
+
+    headers = {
+
+        "User-Agent":
+            "Mozilla/5.0 "
+            "(Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 "
+            "(KHTML, like Gecko) "
+            "Chrome/130.0 Safari/537.36",
+
+        "Accept":
+            "text/html,application/xhtml+xml,"
+            "application/xml;q=0.9,*/*;q=0.8",
+
+        "Accept-Language":
+            "en-US,en;q=0.9"
+    }
+
+    results = []
+
+    # -----------------------------------------------------
+    # METHOD 1
+    # DuckDuckGo HTML
+    # -----------------------------------------------------
+
+    try:
+
+        encoded_query = quote(
+            query
+        )
+
+        url = (
+            "https://html.duckduckgo.com/html/?q="
+            + encoded_query
+        )
 
         response = requests.get(
 
             url,
 
-            params=params,
+            headers=headers,
 
-            headers={
-                "User-Agent":
-                "CommunicationSystemsAI/1.0"
-            },
-
-            timeout=8
+            timeout=20
         )
 
-        content_type = response.headers.get(
-            "Content-Type",
-            ""
-        ).lower()
+        print(
+            "DuckDuckGo HTTP status:",
+            response.status_code
+        )
 
-        if (
-            response.status_code == 200
-            and "json" in content_type
-        ):
+        response.raise_for_status()
 
-            data = response.json()
+        soup = BeautifulSoup(
 
-            # --------------------------------------------
-            # Abstract
-            # --------------------------------------------
+            response.text,
 
-            abstract = data.get(
-                "AbstractText",
-                ""
+            "html.parser"
+        )
+
+        result_blocks = soup.select(
+            ".result"
+        )
+
+        print(
+            "DuckDuckGo HTML blocks:",
+            len(result_blocks)
+        )
+
+        for result in result_blocks:
+
+            title_element = (
+                result.select_one(
+                    ".result__title"
+                )
             )
 
-            abstract_url = data.get(
-                "AbstractURL",
-                ""
+            link_element = (
+                result.select_one(
+                    ".result__a"
+                )
             )
 
-            heading = data.get(
-                "Heading",
-                "DuckDuckGo Information"
+            snippet_element = (
+                result.select_one(
+                    ".result__snippet"
+                )
             )
 
-            if abstract:
+            if not title_element:
+                continue
 
-                results.append({
+            if not link_element:
+                continue
 
-                    "title": heading,
-
-                    "text":
-                    clean_internet_text(
-                        abstract
-                    ),
-
-                    "url":
-                    abstract_url
-                })
-
-            # --------------------------------------------
-            # Related topics
-            # --------------------------------------------
-
-            related_topics = data.get(
-                "RelatedTopics",
-                []
+            title = (
+                title_element.get_text(
+                    " ",
+                    strip=True
+                )
             )
 
-            for item in related_topics:
-
-                if not isinstance(
-                    item,
-                    dict
-                ):
-                    continue
-
-                text = item.get(
-                    "Text",
+            link = (
+                link_element.get(
+                    "href",
                     ""
                 )
+            )
 
-                first_url = item.get(
-                    "FirstURL",
-                    ""
+            snippet = ""
+
+            if snippet_element:
+
+                snippet = (
+                    snippet_element.get_text(
+                        " ",
+                        strip=True
+                    )
                 )
 
-                if not text:
-                    continue
+            if not link:
+                continue
 
-                results.append({
+            # Resolve DuckDuckGo redirect links
+            if link.startswith("/l/"):
 
-                    "title":
-                    "Related Information",
+                link = urljoin(
 
-                    "text":
-                    clean_internet_text(
-                        text
-                    ),
+                    "https://duckduckgo.com",
 
-                    "url":
-                    first_url
-                })
+                    link
+                )
+
+            # Decode redirect URL
+            if "uddg=" in link:
+
+                try:
+
+                    encoded_url = (
+                        link.split(
+                            "uddg=",
+                            1
+                        )[1]
+                    )
+
+                    encoded_url = (
+                        encoded_url.split(
+                            "&",
+                            1
+                        )[0]
+                    )
+
+                    link = unquote(
+                        encoded_url
+                    )
+
+                except Exception:
+
+                    pass
+
+            # Remove Wikipedia
+            if "wikipedia.org" in (
+                link.lower()
+            ):
+
+                continue
+
+            results.append({
+
+                "title": title,
+
+                "snippet": snippet,
+
+                "url": link
+            })
+
+            if len(results) >= 10:
+
+                break
 
     except Exception as e:
 
         print(
-            "DuckDuckGo API error:"
+            "DuckDuckGo HTML error:",
+            repr(e)
         )
 
-        print(e)
 
+    # -----------------------------------------------------
+    # METHOD 2
+    # DuckDuckGo Lite fallback
+    # -----------------------------------------------------
 
-    # --------------------------------------------------------
-    # METHOD 2 - DUCKDUCKGO HTML FALLBACK
-    # --------------------------------------------------------
-
-    if len(results) < 3:
+    if not results:
 
         try:
 
-            search_url = (
-                "https://html.duckduckgo.com/html/"
+            encoded_query = quote(
+                query
+            )
+
+            url = (
+                "https://lite.duckduckgo.com/lite/?q="
+                + encoded_query
             )
 
             response = requests.get(
 
-                search_url,
+                url,
 
-                params={
-                    "q": question
-                },
+                headers=headers,
 
-                headers={
-
-                    "User-Agent":
-                    (
-                        "Mozilla/5.0 "
-                        "(Windows NT 10.0; Win64; x64) "
-                        "AppleWebKit/537.36 "
-                        "(KHTML, like Gecko) "
-                        "Chrome/154.0 Safari/537.36"
-                    )
-                },
-
-                timeout=10
+                timeout=20
             )
 
-            if response.status_code == 200:
+            print(
+                "DuckDuckGo Lite status:",
+                response.status_code
+            )
 
-                soup = BeautifulSoup(
-                    response.text,
-                    "html.parser"
+            response.raise_for_status()
+
+            soup = BeautifulSoup(
+
+                response.text,
+
+                "html.parser"
+            )
+
+            links = soup.select(
+                "a.result-link"
+            )
+
+            print(
+                "DuckDuckGo Lite links:",
+                len(links)
+            )
+
+            for link_element in links:
+
+                title = (
+                    link_element.get_text(
+                        " ",
+                        strip=True
+                    )
                 )
 
-                search_results = soup.select(
-                    ".result"
+                link = (
+                    link_element.get(
+                        "href",
+                        ""
+                    )
                 )
 
-                for result in search_results[:10]:
+                if not title or not link:
 
-                    title_element = (
-                        result.select_one(
-                            ".result__title"
-                        )
-                    )
+                    continue
 
-                    snippet_element = (
-                        result.select_one(
-                            ".result__snippet"
-                        )
-                    )
+                if (
+                    "wikipedia.org"
+                    in link.lower()
+                ):
 
-                    link_element = (
-                        result.select_one(
-                            ".result__a"
-                        )
-                    )
+                    continue
 
-                    if (
-                        not title_element
-                        or
-                        not snippet_element
-                    ):
-                        continue
+                snippet = ""
 
-                    title = clean_text(
-                        title_element.get_text(
+                parent = (
+                    link_element.parent
+                )
+
+                if parent:
+
+                    snippet = (
+                        parent.get_text(
                             " ",
                             strip=True
                         )
                     )
 
-                    snippet = (
-                        clean_internet_text(
-                            snippet_element.get_text(
-                                " ",
-                                strip=True
-                            )
-                        )
-                    )
+                results.append({
 
-                    link = ""
+                    "title": title,
 
-                    if link_element:
+                    "snippet": snippet,
 
-                        link = (
-                            link_element.get(
-                                "href",
-                                ""
-                            )
-                        )
+                    "url": link
+                })
 
-                    # --------------------------------
-                    # Remove Wikipedia
-                    # --------------------------------
+                if len(results) >= 10:
 
-                    combined = (
-                        title +
-                        " " +
-                        link
-                    ).lower()
-
-                    if (
-                        "wikipedia.org"
-                        in combined
-                    ):
-                        continue
-
-                    if len(snippet) < 30:
-                        continue
-
-                    results.append({
-
-                        "title":
-                        title,
-
-                        "text":
-                        snippet,
-
-                        "url":
-                        link
-                    })
+                    break
 
         except Exception as e:
 
             print(
-                "DuckDuckGo HTML error:"
+                "DuckDuckGo Lite error:",
+                repr(e)
             )
 
-            print(e)
-
-
-    # --------------------------------------------------------
-    # REMOVE DUPLICATES
-    # --------------------------------------------------------
-
-    unique_results = []
-
-    seen = set()
-
-    for result in results:
-
-        title = result.get(
-            "title",
-            ""
-        )
-
-        text = result.get(
-            "text",
-            ""
-        )
-
-        url = result.get(
-            "url",
-            ""
-        )
-
-        # Never allow Wikipedia
-        if (
-            "wikipedia.org"
-            in
-            (
-                title +
-                " " +
-                text +
-                " " +
-                url
-            ).lower()
-        ):
-
-            continue
-
-        key = (
-            title +
-            " " +
-            text
-        ).lower()
-
-        key = re.sub(
-            r"\s+",
-            " ",
-            key
-        ).strip()
-
-        if not key:
-            continue
-
-        if key in seen:
-            continue
-
-        seen.add(key)
-
-        unique_results.append({
-
-            "title": title,
-
-            "text": text,
-
-            "url": url
-        })
 
     print(
-        "DuckDuckGo results:",
-        len(unique_results)
+        "Final DuckDuckGo results:",
+        len(results)
     )
 
-    return unique_results[:8]
+    return results
 
 
-# ============================================================
-# INTERNET AI ANSWER
-# ============================================================
+# =========================================================
+# INTERNET SEARCH
+# =========================================================
 
-def generate_internet_ai_answer(
-    question,
-    search_results
-):
+def search_internet(query):
 
-    if not search_results:
+    query = query.strip()
 
-        return (
-            "I could not find suitable "
-            "information on the Internet."
+    if not query:
+
+        return []
+
+    # Don't force communication systems onto
+    # every query. This makes general questions
+    # such as VLSI work properly.
+
+    search_queries = [
+
+        query,
+
+        query + " communication systems",
+
+        query + " engineering"
+    ]
+
+    all_results = []
+
+    seen_urls = set()
+
+    for search_query in search_queries:
+
+        results = search_duckduckgo(
+            search_query
         )
 
-    # --------------------------------------------------------
-    # Collect snippets
-    # --------------------------------------------------------
+        for result in results:
+
+            url = result.get(
+                "url",
+                ""
+            )
+
+            if not url:
+
+                continue
+
+            normalized_url = (
+                url.lower().rstrip("/")
+            )
+
+            if normalized_url in seen_urls:
+
+                continue
+
+            seen_urls.add(
+                normalized_url
+            )
+
+            all_results.append(
+                result
+            )
+
+        if len(all_results) >= 10:
+
+            break
+
+    print(
+        "Total Internet results:",
+        len(all_results)
+    )
+
+    return all_results[:10]
+
+
+# =========================================================
+# SELECT IMPORTANT RESULTS
+# =========================================================
+
+def get_essential_information(
+    question,
+    results
+):
+
+    if not results:
+
+        return []
 
     documents = []
 
-    for result in search_results:
+    for result in results:
 
-        text = result.get(
-            "text",
-            ""
-        )
+        documents.append(
 
-        if text:
-
-            documents.append(
-                text
+            result.get(
+                "title",
+                ""
             )
 
-    # --------------------------------------------------------
-    # TF-IDF FILTER
-    # --------------------------------------------------------
+            + " "
 
-    relevant_text = get_relevant_text(
-
-        question,
-
-        documents,
-
-        top_n=6
-    )
-
-    if not relevant_text:
-
-        relevant_text = "\n".join(
-            documents[:6]
+            + result.get(
+                "snippet",
+                ""
+            )
         )
 
-    # --------------------------------------------------------
-    # Limit context
-    # --------------------------------------------------------
+    try:
 
-    relevant_text = relevant_text[:15000]
+        vectorizer = TfidfVectorizer(
 
-    # --------------------------------------------------------
-    # Gemini prompt
-    # --------------------------------------------------------
+            stop_words="english",
+
+            ngram_range=(1, 2)
+        )
+
+        vectors = vectorizer.fit_transform(
+
+            [question]
+
+            + documents
+        )
+
+        question_vector = vectors[0]
+
+        result_vectors = vectors[1:]
+
+        similarities = cosine_similarity(
+
+            question_vector,
+
+            result_vectors
+        )[0]
+
+        ranked_indexes = sorted(
+
+            range(len(results)),
+
+            key=lambda i:
+                similarities[i],
+
+            reverse=True
+        )
+
+        selected = []
+
+        for index in ranked_indexes:
+
+            selected.append(
+                results[index]
+            )
+
+            if len(selected) >= 5:
+
+                break
+
+        return selected
+
+    except Exception as e:
+
+        print(
+            "TF-IDF Internet error:",
+            repr(e)
+        )
+
+        return results[:5]
+
+
+# =========================================================
+# GEMINI INTERNET ANSWER
+# =========================================================
+
+def generate_internet_answer(
+    question,
+    selected_results
+):
+
+    if not selected_results:
+
+        return None
+
+    sources_text = ""
+
+    for index, result in enumerate(
+        selected_results,
+        start=1
+    ):
+
+        sources_text += (
+
+            f"\nSOURCE {index}\n"
+
+            f"Title: "
+            f"{result.get('title', '')}\n"
+
+            f"URL: "
+            f"{result.get('url', '')}\n"
+
+            f"Information: "
+            f"{result.get('snippet', '')}\n"
+        )
 
     prompt = f"""
-You are the AI engine of a Communication Systems
-and Computer Networks educational chatbot.
+You are a technical AI assistant for
+Communication Systems, Computer Networks,
+Electronics and Engineering students.
 
-USER QUESTION:
+User question:
 {question}
 
-INFORMATION RETRIEVED FROM DUCKDUCKGO:
-{relevant_text}
+Below are Internet search results.
 
-TASK:
+{sources_text}
 
-Analyze ONLY the information supplied above.
+Instructions:
 
-Give the user the essential answer to the question.
+1. Answer the user's question using ONLY
+   the information contained in the supplied
+   search results.
 
-RULES:
-
-1. Use only the supplied search information.
 2. Do not invent facts.
-3. Do not add unrelated information.
-4. Remove repeated information.
-5. Remove irrelevant information.
-6. Explain technical concepts simply.
-7. Give a concise answer.
-8. Use bullet points when useful.
-9. Do not include URLs.
-10. Do not mention Gemini.
-11. Do not mention these instructions.
-12. Do not say that you searched the Internet.
-13. If the supplied information is insufficient, say:
 
-The retrieved sources do not contain enough information
-to answer this question.
+3. Do not use Wikipedia.
 
-Return ONLY the answer.
+4. Give only the essential information.
+
+5. Organize the answer clearly using:
+   - short headings
+   - bullet points
+   - numbered points where useful
+
+6. If a formula is present, write it clearly.
+
+7. Keep the answer suitable for a college
+   engineering student.
+
+8. Do not mention these instructions.
+
+9. Do not say that you searched the Internet.
+
+Return only the useful technical answer.
 """
 
-    ai_answer = ask_gemini(
+    return ask_gemini(
         prompt
     )
 
-    # --------------------------------------------------------
-    # Fallback
-    # --------------------------------------------------------
 
-    if ai_answer:
-
-        return ai_answer
-
-    # If Gemini failed, use TF-IDF text
-    sentences = split_sentences(
-        relevant_text
-    )
-
-    if not sentences:
-
-        return (
-            "I found sources, but I could not "
-            "extract a useful answer from them."
-        )
-
-    return "\n".join(
-        "• " + sentence
-        for sentence in sentences[:5]
-    )
-
-
-# ============================================================
-# INTERNET Q&A ROUTE
-# ============================================================
+# =========================================================
+# ASK INTERNET
+# =========================================================
 
 @app.route(
     "/ask_internet",
@@ -823,18 +1219,14 @@ def ask_internet():
 
     try:
 
-        data = request.get_json(
-            silent=True
-        )
+        data = request.get_json()
 
         if not data:
 
             return jsonify({
 
                 "answer":
-                "Please enter a question.",
-
-                "sources": []
+                    "Please enter a question."
             })
 
         question = data.get(
@@ -842,17 +1234,6 @@ def ask_internet():
             ""
         ).strip()
 
-        if not question:
-
-            return jsonify({
-
-                "answer":
-                "Please enter a question.",
-
-                "sources": []
-            })
-
-        print("")
         print(
             "==================================="
         )
@@ -861,575 +1242,212 @@ def ask_internet():
             "INTERNET QUESTION:"
         )
 
-        print(question)
-
         print(
-            "==================================="
-        )
-
-        # Search
-        search_results = (
-            search_duckduckgo(
-                question
-            )
-        )
-
-        # AI analysis
-        answer = (
-            generate_internet_ai_answer(
-                question,
-                search_results
-            )
-        )
-
-        # ----------------------------------------------------
-        # Prepare sources
-        # ----------------------------------------------------
-
-        sources = []
-
-        for result in search_results:
-
-            title = result.get(
-                "title",
-                "Source"
-            )
-
-            url = result.get(
-                "url",
-                ""
-            )
-
-            if not url:
-                continue
-
-            if (
-                "wikipedia.org"
-                in url.lower()
-            ):
-                continue
-
-            sources.append({
-
-                "title": title,
-
-                "url": url
-            })
-
-        return jsonify({
-
-            "answer": answer,
-
-            "sources":
-            sources[:5]
-        })
-
-    except Exception as e:
-
-        print(
-            "Internet route error:"
-        )
-
-        print(
-            repr(e)
-        )
-
-        return jsonify({
-
-            "answer":
-            "An error occurred while processing "
-            "the Internet search.",
-
-            "sources": []
-        })
-
-
-# ============================================================
-# PDF UPLOAD
-# ============================================================
-
-@app.route(
-    "/upload_pdf",
-    methods=["POST"]
-)
-def upload_pdf():
-
-    global PDF_TEXT
-    global PDF_NAME
-
-    try:
-
-        if "pdf" not in request.files:
-
-            return jsonify({
-
-                "success": False,
-
-                "message":
-                "No PDF file selected."
-            })
-
-        file = request.files["pdf"]
-
-        if not file.filename:
-
-            return jsonify({
-
-                "success": False,
-
-                "message":
-                "No PDF file selected."
-            })
-
-        if not file.filename.lower().endswith(
-            ".pdf"
-        ):
-
-            return jsonify({
-
-                "success": False,
-
-                "message":
-                "Please upload a PDF file."
-            })
-
-        # ----------------------------------------------------
-        # Safe filename
-        # ----------------------------------------------------
-
-        filename = re.sub(
-
-            r"[^a-zA-Z0-9_.-]",
-
-            "_",
-
-            file.filename
-        )
-
-        filepath = os.path.join(
-
-            UPLOAD_FOLDER,
-
-            filename
-        )
-
-        file.save(filepath)
-
-        # ----------------------------------------------------
-        # Extract text using PyMuPDF
-        # ----------------------------------------------------
-
-        document = fitz.open(
-            filepath
-        )
-
-        pages = []
-
-        for page in document:
-
-            page_text = page.get_text()
-
-            if page_text:
-
-                pages.append(
-                    page_text
-                )
-
-        document.close()
-
-        PDF_TEXT = "\n".join(
-            pages
-        )
-
-        PDF_NAME = filename
-
-        if not PDF_TEXT.strip():
-
-            return jsonify({
-
-                "success": False,
-
-                "message":
-                "No readable text was found in the PDF."
-            })
-
-        print("")
-        print(
-            "==================================="
-        )
-
-        print(
-            "PDF UPLOADED:"
-        )
-
-        print(
-            PDF_NAME
-        )
-
-        print(
-            "PDF CHARACTERS:",
-            len(PDF_TEXT)
+            question
         )
 
         print(
             "==================================="
         )
-
-        return jsonify({
-
-            "success": True,
-
-            "message":
-            "PDF uploaded successfully.",
-
-            "filename":
-            PDF_NAME
-        })
-
-    except Exception as e:
-
-        print(
-            "PDF upload error:"
-        )
-
-        print(
-            repr(e)
-        )
-
-        return jsonify({
-
-            "success": False,
-
-            "message":
-            "Could not process the PDF."
-        })
-
-
-# ============================================================
-# FIND RELEVANT PDF CONTENT
-# ============================================================
-
-def get_relevant_pdf_content(
-    question,
-    pdf_text,
-    top_n=8
-):
-
-    if not pdf_text:
-
-        return ""
-
-    # --------------------------------------------------------
-    # Split PDF into paragraphs
-    # --------------------------------------------------------
-
-    paragraphs = re.split(
-
-        r"\n\s*\n",
-
-        pdf_text
-    )
-
-    cleaned = []
-
-    for paragraph in paragraphs:
-
-        paragraph = clean_text(
-            paragraph
-        )
-
-        if len(paragraph) >= 40:
-
-            cleaned.append(
-                paragraph
-            )
-
-    # --------------------------------------------------------
-    # If paragraphs aren't available,
-    # create chunks
-    # --------------------------------------------------------
-
-    if not cleaned:
-
-        words = pdf_text.split()
-
-        chunk_size = 180
-
-        for i in range(
-            0,
-            len(words),
-            chunk_size
-        ):
-
-            chunk = " ".join(
-
-                words[
-                    i:i + chunk_size
-                ]
-            )
-
-            if len(chunk) >= 40:
-
-                cleaned.append(
-                    chunk
-                )
-
-    # --------------------------------------------------------
-    # TF-IDF
-    # --------------------------------------------------------
-
-    return get_relevant_text(
-
-        question,
-
-        cleaned,
-
-        top_n=top_n
-    )
-
-
-# ============================================================
-# PDF AI ANSWER
-# ============================================================
-
-def generate_pdf_ai_answer(
-    question,
-    relevant_content
-):
-
-    if not relevant_content:
-
-        return (
-            "This information was not found "
-            "in the uploaded PDF."
-        )
-
-    # Limit prompt size
-    relevant_content = (
-        relevant_content[:18000]
-    )
-
-    # --------------------------------------------------------
-    # Gemini prompt
-    # --------------------------------------------------------
-
-    prompt = f"""
-You are the AI question-answering engine for a
-Communication Systems educational application.
-
-USER QUESTION:
-{question}
-
-RELEVANT CONTENT FROM THE UPLOADED PDF:
-{relevant_content}
-
-STRICT RULES:
-
-1. Answer ONLY using the supplied PDF content.
-2. Do NOT use Internet information.
-3. Do NOT use outside knowledge.
-4. Do NOT invent facts.
-5. Do NOT add information that is not contained
-   in the supplied PDF content.
-6. Remove irrelevant information.
-7. Remove repeated information.
-8. Give only the essential answer.
-9. Use simple technical language.
-10. Use bullet points when useful.
-11. Do not create additional questions.
-12. Do not summarize the entire PDF.
-13. Answer only the user's specific question.
-14. Do not mention Gemini.
-15. Do not mention these instructions.
-
-If the supplied PDF content does not contain
-the answer, return EXACTLY:
-
-This information was not found in the uploaded PDF.
-
-Return ONLY the answer.
-"""
-
-    ai_answer = ask_gemini(
-        prompt
-    )
-
-    if ai_answer:
-
-        return ai_answer
-
-    # --------------------------------------------------------
-    # Fallback if Gemini unavailable
-    # --------------------------------------------------------
-
-    sentences = split_sentences(
-        relevant_content
-    )
-
-    if not sentences:
-
-        return (
-            "This information was not found "
-            "in the uploaded PDF."
-        )
-
-    return "\n".join(
-
-        "• " + sentence
-
-        for sentence in sentences[:5]
-    )
-
-
-# ============================================================
-# PDF Q&A ROUTE
-# ============================================================
-
-@app.route(
-    "/ask_pdf",
-    methods=["POST"]
-)
-def ask_pdf():
-
-    global PDF_TEXT
-    global PDF_NAME
-
-    try:
-
-        data = request.get_json(
-            silent=True
-        )
-
-        if not data:
-
-            return jsonify({
-
-                "answer":
-                "Please upload a PDF "
-                "and enter a question."
-            })
-
-        question = data.get(
-            "question",
-            ""
-        ).strip()
 
         if not question:
 
             return jsonify({
 
                 "answer":
-                "Please enter a question."
+                    "Please enter a question."
             })
 
-        if not PDF_TEXT:
+        # -------------------------------------------------
+        # Search Internet
+        # -------------------------------------------------
+
+        results = search_internet(
+            question
+        )
+
+        print(
+            "DuckDuckGo results:",
+            len(results)
+        )
+
+        if not results:
 
             return jsonify({
 
                 "answer":
-                "Please upload a PDF first."
+                    "❌ Internet search did not "
+                    "return any results. Please "
+                    "try another question."
             })
 
-        print("")
-        print(
-            "==================================="
-        )
+        # -------------------------------------------------
+        # Select relevant results
+        # -------------------------------------------------
 
-        print(
-            "PDF QUESTION:"
-        )
-
-        print(question)
-
-        print(
-            "==================================="
-        )
-
-        # ----------------------------------------------------
-        # Find relevant PDF content
-        # ----------------------------------------------------
-
-        relevant_content = (
-            get_relevant_pdf_content(
+        selected_results = (
+            get_essential_information(
 
                 question,
 
-                PDF_TEXT,
-
-                top_n=8
+                results
             )
         )
 
-        # ----------------------------------------------------
-        # Gemini AI analysis
-        # ----------------------------------------------------
+        # -------------------------------------------------
+        # Gemini answer
+        # -------------------------------------------------
 
-        answer = (
-            generate_pdf_ai_answer(
+        gemini_answer = (
+            generate_internet_answer(
 
                 question,
 
-                relevant_content
+                selected_results
             )
         )
+
+        # -------------------------------------------------
+        # Build answer
+        # -------------------------------------------------
+
+        if gemini_answer:
+
+            answer = gemini_answer
+
+        else:
+
+            answer_parts = []
+
+            for result in selected_results:
+
+                snippet = (
+                    result.get(
+                        "snippet",
+                        ""
+                    ).strip()
+                )
+
+                if snippet:
+
+                    answer_parts.append(
+                        snippet
+                    )
+
+            if not answer_parts:
+
+                answer = (
+                    "❌ No useful information "
+                    "was found."
+                )
+
+            else:
+
+                unique_parts = []
+
+                for part in answer_parts:
+
+                    if (
+                        part
+                        not in unique_parts
+                    ):
+
+                        unique_parts.append(
+                            part
+                        )
+
+                answer = (
+                    "📌 <b>"
+                    "Essential information:"
+                    "</b><br><br>"
+                )
+
+                answer += (
+                    "<br><br>".join(
+                        unique_parts
+                    )
+                )
+
+        # -------------------------------------------------
+        # Add sources
+        # -------------------------------------------------
+
+        answer += (
+            "<br><br>"
+            "<b>🔗 Sources:</b>"
+            "<br>"
+        )
+
+        for result in selected_results:
+
+            title = (
+                result.get(
+                    "title",
+                    "Source"
+                )
+            )
+
+            url = (
+                result.get(
+                    "url",
+                    ""
+                )
+            )
+
+            if not url:
+
+                continue
+
+            safe_title = (
+                title.replace(
+                    "<",
+                    ""
+                ).replace(
+                    ">",
+                    ""
+                )
+            )
+
+            answer += (
+
+                '<br>• '
+
+                f'<a href="{url}" '
+                'target="_blank" '
+                'rel="noopener noreferrer">'
+
+                f'{safe_title}'
+
+                '</a>'
+            )
 
         return jsonify({
 
-            "answer": answer,
-
-            "filename": PDF_NAME
+            "answer": answer
         })
 
     except Exception as e:
 
         print(
-            "PDF Q&A error:"
-        )
-
-        print(
+            "INTERNET SEARCH ERROR:",
             repr(e)
         )
 
         return jsonify({
 
             "answer":
-            "An error occurred while "
-            "processing the PDF question."
+                "❌ Internet search error: "
+                + str(e)
         })
 
 
-# ============================================================
-# HEALTH CHECK
-# ============================================================
-
-@app.route("/health")
-def health():
-
-    return jsonify({
-
-        "status":
-        "running",
-
-        "gemini":
-        (
-            "connected"
-            if gemini_client
-            else "not configured"
-        ),
-
-        "pdf_loaded":
-        bool(PDF_TEXT)
-    })
-
-
-# ============================================================
-# RUN SERVER
-# ============================================================
+# =========================================================
+# RUN APPLICATION
+# =========================================================
 
 if __name__ == "__main__":
 
     port = int(
-
         os.environ.get(
             "PORT",
             5000
