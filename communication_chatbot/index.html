@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        Communication Systems AI
+    </title>
+
+    <meta
+        name="description"
+        content="AI Study Assistant for Communication Systems and Computer Networks"
+    >
+
+    <!-- =====================================================
+         MAIN CSS
+         GitHub Pages frontend-only
+    ====================================================== -->
+
+    <link
+        rel="stylesheet"
+        href="style.css"
+    >
+
+
+    <!-- =====================================================
+         MATHJAX CONFIGURATION
+    ====================================================== -->
+
+    <script>
+
+        window.MathJax = {
+
+            tex: {
+
+                inlineMath: [
+                    ['$', '$'],
+                    ['\\(', '\\)']
+                ],
+
+                displayMath: [
+                    ['$$', '$$'],
+                    ['\\[', '\\]']
+                ]
+
+            },
+
+            options: {
+
+                skipHtmlTags: [
+                    'script',
+                    'noscript',
+                    'style',
+                    'textarea',
+                    'pre',
+                    'code'
+                ]
+
+            }
+
+        };
+
+    </script>
+
+
+    <!-- =====================================================
+         MATHJAX
+    ====================================================== -->
+
+    <script
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
+    ></script>
+
+
+</head>
+
+
+<body>
+
+
+<div class="app">
+
+
+    <!-- =====================================================
+         SIDEBAR
+    ====================================================== -->
+
+    <aside class="sidebar">
+
+
+        <!-- =================================================
+             LOGO
+        ================================================== -->
+
+        <div class="logo">
+
+            <div class="logo-icon">
+                📡
+            </div>
+
+            <div>
+
+                <h2>
+                    Communication<br>
+                    Systems AI
+                </h2>
+
+                <span>
+                    AI Study Assistant
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <!-- =================================================
+             NEW CHAT
+        ================================================== -->
+
+        <button
+            id="newChatButton"
+            class="new-chat"
+            type="button"
+        >
+
+            ＋ New Chat
+
+        </button>
+
+
+        <!-- =================================================
+             SEARCH HISTORY
+        ================================================== -->
+
+        <div class="history-section">
+
+            <div class="history-header">
+
+                <span>
+                    🕘 Search History
+                </span>
+
+                <button
+                    id="clearHistoryButton"
+                    class="history-clear"
+                    type="button"
+                >
+
+                    Clear
+
+                </button>
+
+            </div>
+
+
+            <div
+                id="historyList"
+                class="history-list"
+            >
+
+                <div class="empty-history">
+
+                    No search history
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- =================================================
+             AI TOOLS
+        ================================================== -->
+
+        <div class="ai-tools">
+
+            <h3>
+                🤖 AI Tools
+            </h3>
+
+
+            <!-- ChatGPT -->
+
+            <button
+                class="tool-button"
+                type="button"
+                onclick="window.open(
+                    'https://chatgpt.com/',
+                    '_blank'
+                )"
+            >
+
+                🤖 &nbsp; ChatGPT
+
+            </button>
+
+
+            <!-- Gemini -->
+
+            <button
+                class="tool-button"
+                type="button"
+                onclick="window.open(
+                    'https://gemini.google.com/',
+                    '_blank'
+                )"
+            >
+
+                ✨ &nbsp; Gemini
+
+            </button>
+
+        </div>
+
+
+    </aside>
+
+
+
+    <!-- =====================================================
+         MAIN
+    ====================================================== -->
+
+    <main class="main">
+
+
+        <!-- =================================================
+             HEADER
+        ================================================== -->
+
+        <header class="header">
+
+
+            <div class="header-left">
+
+
+                <!-- Header icon -->
+
+                <div class="header-icon">
+
+                    📡
+
+                </div>
+
+
+                <!-- Header text -->
+
+                <div>
+
+                    <h1>
+
+                        Communication Systems AI
+
+                    </h1>
+
+
+                    <p>
+
+                        Learn Communication Systems using
+                        Internet and PDF resources
+
+                    </p>
+
+                </div>
+
+
+            </div>
+
+
+            <!-- Current mode -->
+
+            <div
+                id="modeBadge"
+                class="mode-badge"
+            >
+
+                🌐 Internet Q&amp;A
+
+            </div>
+
+
+        </header>
+
+
+
+        <!-- =================================================
+             CONTENT
+        ================================================== -->
+
+        <section class="content">
+
+
+            <!-- =================================================
+                 ANSWER CARD
+            ================================================== -->
+
+            <div class="answer-card">
+
+
+                <div
+                    id="answerBox"
+                    class="ai-answer"
+                >
+
+
+                    <!-- =================================================
+                         WELCOME SCREEN
+                    ================================================== -->
+
+                    <div class="welcome-answer">
+
+
+                        <div class="welcome-icon">
+
+                            🤖
+
+                        </div>
+
+
+                        <h3>
+
+                            AI Assistant
+
+                        </h3>
+
+
+                        <p>
+
+                            Ask a Communication Systems
+                            or Computer Networks question.
+
+                        </p>
+
+
+                        <p>
+
+                            Use Internet Q&amp;A to search
+                            relevant information, or upload
+                            a PDF and ask questions directly
+                            from the document.
+
+                        </p>
+
+
+                    </div>
+
+
+                </div>
+
+
+            </div>
+
+
+
+            <!-- =================================================
+                 QUESTION SECTION
+            ================================================== -->
+
+            <section class="question-section">
+
+
+                <!-- =================================================
+                     QUESTION INPUT
+                ================================================== -->
+
+                <div class="question-row">
+
+
+                    <input
+                        type="text"
+                        id="questionInput"
+                        placeholder="Ask a Communication Systems question..."
+                        autocomplete="off"
+                    >
+
+
+                    <button
+                        id="sendButton"
+                        type="button"
+                    >
+
+                        Send ➤
+
+                    </button>
+
+
+                </div>
+
+
+
+                <!-- =================================================
+                     MODE BUTTONS
+                ================================================== -->
+
+                <div class="action-buttons">
+
+
+                    <!-- Internet Q&A -->
+
+                    <button
+                        id="internetButton"
+                        class="action-button active-mode"
+                        type="button"
+                    >
+
+                        🌐 Internet Q&amp;A
+
+                    </button>
+
+
+                    <!-- Upload PDF -->
+
+                    <button
+                        id="uploadPdfButton"
+                        class="action-button"
+                        type="button"
+                    >
+
+                        📄 Upload PDF
+
+                    </button>
+
+
+                    <!-- PDF Q&A -->
+
+                    <button
+                        id="pdfButton"
+                        class="action-button"
+                        type="button"
+                    >
+
+                        📄 PDF Q&amp;A
+
+                    </button>
+
+
+                </div>
+
+
+
+                <!-- =================================================
+                     PDF UPLOAD AREA
+                ================================================== -->
+
+                <div
+                    id="pdfUploadArea"
+                    class="pdf-upload-area"
+                    style="display: none;"
+                >
+
+
+                    <!-- Hidden/native file input -->
+
+                    <input
+                        type="file"
+                        id="pdfInput"
+                        accept=".pdf,application/pdf"
+                    >
+
+
+                    <!-- Selected file name -->
+
+                    <span id="pdfFileName">
+
+                        No PDF selected
+
+                    </span>
+
+
+                </div>
+
+
+
+                <!-- =================================================
+                     STATUS
+                ================================================== -->
+
+                <div
+                    id="statusText"
+                    class="status"
+                >
+
+                    Ready
+
+                </div>
+
+
+            </section>
+
+
+        </section>
+
+
+    </main>
+
+
+</div>
+
+
+
+<!-- =========================================================
+     FRONTEND JAVASCRIPT
+     
+     IMPORTANT:
+     This is a normal JavaScript file.
+     No Flask/Jinja syntax is used.
+========================================================== -->
+
+<script src="script.js"></script>
+
+
+</body>
+
+</html>
