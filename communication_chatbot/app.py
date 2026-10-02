@@ -1,4 +1,3 @@
-```python
 from flask import Flask, render_template, request, jsonify
 import fitz
 import os
@@ -7,14 +6,14 @@ import time
 import requests
 
 from bs4 import BeautifulSoup
-from urllib.parse import quote, urljoin, unquote
+from urllib.parse import quote, unquote
 
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 
 # ============================================================
-# FLASK APP
+# FLASK APPLICATION
 # ============================================================
 
 app = Flask(__name__)
@@ -31,13 +30,19 @@ except ImportError:
 
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+
+# Keep your configured Gemini model here.
+# If your API account uses a different available model,
+# change this value.
 GEMINI_MODEL = "gemini-3.8-flash"
 
 gemini_client = None
 
+
 if genai and GEMINI_API_KEY:
 
     try:
+
         gemini_client = genai.Client(
             api_key=GEMINI_API_KEY
         )
@@ -48,7 +53,8 @@ if genai and GEMINI_API_KEY:
 
     except Exception as e:
 
-        print("Gemini initialization error:", repr(e))
+        print("Gemini initialization error:")
+        print(repr(e))
 
 else:
 
@@ -59,7 +65,7 @@ else:
 
 
 # ============================================================
-# GLOBAL PDF VARIABLES
+# PDF GLOBAL VARIABLES
 # ============================================================
 
 pdf_text = ""
@@ -67,13 +73,15 @@ pdf_filename = ""
 
 
 # ============================================================
-# HOME
+# HOME PAGE
 # ============================================================
 
 @app.route("/")
 def home():
 
-    return render_template("index.html")
+    return render_template(
+        "index.html"
+    )
 
 
 # ============================================================
@@ -97,13 +105,17 @@ def ask_gemini(prompt):
 
     if not gemini_client:
 
-        print("Gemini client is not initialized.")
+        print(
+            "Gemini client is not initialized."
+        )
 
         return None
 
     try:
 
-        print("Sending request to Gemini...")
+        print(
+            "Sending request to Gemini..."
+        )
 
         response = gemini_client.models.generate_content(
             model=GEMINI_MODEL,
@@ -112,70 +124,99 @@ def ask_gemini(prompt):
 
         if response and response.text:
 
-            print("Gemini response received.")
+            print(
+                "Gemini response received."
+            )
 
             return response.text.strip()
 
-        print("Gemini returned an empty response.")
+        print(
+            "Gemini returned an empty response."
+        )
 
         return None
 
     except Exception as e:
 
-        print("GEMINI API ERROR:")
-        print(repr(e))
+        print(
+            "GEMINI API ERROR:"
+        )
+
+        print(
+            repr(e)
+        )
 
         return None
 
 
 # ============================================================
-# REMOVE WIKIPEDIA
-# ============================================================
-
-def is_wikipedia(url):
-
-    if not url:
-        return False
-
-    return "wikipedia.org" in url.lower()
-
-
-# ============================================================
-# CLEAN TEXT
+# TEXT CLEANING
 # ============================================================
 
 def clean_text(text):
 
     if not text:
+
         return ""
 
-    text = re.sub(r"\s+", " ", text)
+    text = re.sub(
+        r"\s+",
+        " ",
+        text
+    )
 
     return text.strip()
 
 
 # ============================================================
-# DUCKDUCKGO REDIRECT URL DECODER
+# WIKIPEDIA FILTER
+# ============================================================
+
+def is_wikipedia(url):
+
+    if not url:
+
+        return False
+
+    return (
+        "wikipedia.org"
+        in url.lower()
+    )
+
+
+# ============================================================
+# DUCKDUCKGO URL DECODER
 # ============================================================
 
 def decode_ddg_url(url):
 
     if not url:
+
         return ""
 
     try:
 
         if url.startswith("//"):
+
             url = "https:" + url
 
         if "uddg=" in url:
 
-            part = url.split("uddg=", 1)[1]
+            value = url.split(
+                "uddg=",
+                1
+            )[1]
 
-            if "&" in part:
-                part = part.split("&", 1)[0]
+            if "&" in value:
 
-            return unquote(part)
+                value = value.split(
+                    "&",
+                    1
+                )[0]
+
+            return unquote(
+                value
+            )
 
         return url
 
@@ -185,208 +226,18 @@ def decode_ddg_url(url):
 
 
 # ============================================================
-# DUCKDUCKGO INSTANT ANSWER API
-#
-# NOTE:
-# This is a fallback.
-# It does NOT provide the complete DuckDuckGo search engine.
-# It provides instant-answer/topic information.
-# ============================================================
-
-def search_duckduckgo_api(query):
-
-    print("-----------------------------------")
-    print("DuckDuckGo API search:", query)
-
-    try:
-
-        api_url = "https://api.duckduckgo.com/"
-
-        params = {
-            "q": query,
-            "format": "json",
-            "no_html": "1",
-            "skip_disambig": "0",
-            "no_redirect": "1"
-        }
-
-        headers = {
-            "User-Agent": (
-                "Mozilla/5.0 "
-                "(Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 "
-                "(KHTML, like Gecko) "
-                "Chrome/154.0.0.0 Safari/537.36"
-            ),
-            "Accept": "application/json"
-        }
-
-        response = requests.get(
-            api_url,
-            params=params,
-            headers=headers,
-            timeout=20
-        )
-
-        print(
-            "DuckDuckGo API HTTP status:",
-            response.status_code
-        )
-
-        if response.status_code != 200:
-
-            print(
-                "DuckDuckGo API failed:",
-                response.text[:300]
-            )
-
-            return []
-
-        data = response.json()
-
-        results = []
-
-        # ----------------------------------------------------
-        # Main abstract
-        # ----------------------------------------------------
-
-        abstract = clean_text(
-            data.get("AbstractText", "")
-        )
-
-        abstract_url = data.get(
-            "AbstractURL",
-            ""
-        )
-
-        heading = clean_text(
-            data.get("Heading", "")
-        )
-
-        if abstract:
-
-            if abstract_url and not is_wikipedia(
-                abstract_url
-            ):
-
-                results.append({
-                    "title": heading or query,
-                    "snippet": abstract,
-                    "link": abstract_url,
-                    "source": "DuckDuckGo"
-                })
-
-            elif not abstract_url:
-
-                results.append({
-                    "title": heading or query,
-                    "snippet": abstract,
-                    "link": "",
-                    "source": "DuckDuckGo"
-                })
-
-        # ----------------------------------------------------
-        # Related topics
-        # ----------------------------------------------------
-
-        def extract_related_topics(topics):
-
-            extracted = []
-
-            for item in topics:
-
-                if not isinstance(item, dict):
-                    continue
-
-                # Nested topic group
-                if "Topics" in item:
-
-                    extracted.extend(
-                        extract_related_topics(
-                            item.get("Topics", [])
-                        )
-                    )
-
-                    continue
-
-                text = clean_text(
-                    item.get("Text", "")
-                )
-
-                first_url = item.get(
-                    "FirstURL",
-                    ""
-                )
-
-                if not text:
-                    continue
-
-                if first_url and is_wikipedia(
-                    first_url
-                ):
-                    continue
-
-                extracted.append({
-                    "title": text[:120],
-                    "snippet": text,
-                    "link": first_url,
-                    "source": "DuckDuckGo"
-                })
-
-            return extracted
-
-        related = extract_related_topics(
-            data.get("RelatedTopics", [])
-        )
-
-        for item in related:
-
-            duplicate = False
-
-            for existing in results:
-
-                if (
-                    existing["snippet"].lower()
-                    == item["snippet"].lower()
-                ):
-
-                    duplicate = True
-                    break
-
-            if not duplicate:
-
-                results.append(item)
-
-            if len(results) >= 8:
-                break
-
-        print(
-            "DuckDuckGo API results:",
-            len(results)
-        )
-
-        return results[:8]
-
-    except Exception as e:
-
-        print(
-            "DuckDuckGo API ERROR:",
-            repr(e)
-        )
-
-        return []
-
-
-# ============================================================
 # DUCKDUCKGO HTML SEARCH
 # ============================================================
 
 def search_duckduckgo_html(query):
 
     print("-----------------------------------")
-    print("DuckDuckGo HTML search:", query)
+    print(
+        "Searching DuckDuckGo:",
+        query
+    )
 
-    urls = [
+    search_urls = [
 
         "https://html.duckduckgo.com/html/?q="
         + quote(query),
@@ -396,44 +247,35 @@ def search_duckduckgo_html(query):
 
     ]
 
-    headers_list = [
+    headers = {
 
-        {
-            "User-Agent": (
-                "Mozilla/5.0 "
-                "(Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 "
-                "(KHTML, like Gecko) "
-                "Chrome/154.0.0.0 Safari/537.36"
-            ),
-            "Accept": (
-                "text/html,application/xhtml+xml,"
-                "application/xml;q=0.9,*/*;q=0.8"
-            ),
-            "Accept-Language": "en-US,en;q=0.9",
-            "Referer": "https://duckduckgo.com/"
-        },
+        "User-Agent":
+            "Mozilla/5.0 "
+            "(Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 "
+            "(KHTML, like Gecko) "
+            "Chrome/154.0.0.0 "
+            "Safari/537.36",
 
-        {
-            "User-Agent":
-                "Mozilla/5.0 (X11; Linux x86_64) "
-                "AppleWebKit/537.36 "
-                "(KHTML, like Gecko) "
-                "Chrome/154.0.0.0 Safari/537.36",
-            "Accept": "text/html"
-        }
+        "Accept":
+            "text/html,"
+            "application/xhtml+xml,"
+            "application/xml;q=0.9,"
+            "*/*;q=0.8",
 
-    ]
+        "Accept-Language":
+            "en-US,en;q=0.9",
+
+        "Referer":
+            "https://duckduckgo.com/"
+
+    }
 
     results = []
 
-    for index, url in enumerate(urls):
+    for url in search_urls:
 
         try:
-
-            headers = headers_list[
-                min(index, len(headers_list) - 1)
-            ]
 
             response = requests.get(
                 url,
@@ -443,19 +285,22 @@ def search_duckduckgo_html(query):
             )
 
             print(
-                "DuckDuckGo HTML status:",
+                "DuckDuckGo HTTP status:",
                 response.status_code
             )
 
             # ------------------------------------------------
-            # DuckDuckGo may return 202.
-            # Wait briefly and try once more.
+            # HTTP 202 retry
             # ------------------------------------------------
 
             if response.status_code == 202:
 
                 print(
-                    "DuckDuckGo returned 202."
+                    "DuckDuckGo returned HTTP 202."
+                )
+
+                print(
+                    "Retrying after short delay..."
                 )
 
                 time.sleep(2)
@@ -481,34 +326,41 @@ def search_duckduckgo_html(query):
                 "html.parser"
             )
 
-            # ------------------------------------------------
-            # Standard DDG result blocks
-            # ------------------------------------------------
-
             blocks = soup.select(
                 ".result"
             )
 
             print(
-                "DuckDuckGo result blocks:",
+                "DuckDuckGo HTML blocks:",
                 len(blocks)
             )
 
-            for result in blocks:
+            # ------------------------------------------------
+            # Standard DuckDuckGo results
+            # ------------------------------------------------
 
-                title_element = result.select_one(
-                    ".result__title"
+            for block in blocks:
+
+                title_element = (
+                    block.select_one(
+                        ".result__title"
+                    )
                 )
 
-                link_element = result.select_one(
-                    ".result__a"
+                link_element = (
+                    block.select_one(
+                        ".result__a"
+                    )
                 )
 
-                snippet_element = result.select_one(
-                    ".result__snippet"
+                snippet_element = (
+                    block.select_one(
+                        ".result__snippet"
+                    )
                 )
 
                 if not title_element:
+
                     continue
 
                 title = clean_text(
@@ -542,68 +394,94 @@ def search_duckduckgo_html(query):
                         )
                     )
 
-                if not title and not snippet:
+                if is_wikipedia(link):
+
                     continue
 
-                if is_wikipedia(link):
+                if not title and not snippet:
+
                     continue
 
                 results.append({
-                    "title": title,
-                    "snippet": snippet,
-                    "link": link,
-                    "source": "DuckDuckGo"
+
+                    "title":
+                        title,
+
+                    "snippet":
+                        snippet,
+
+                    "link":
+                        link,
+
+                    "source":
+                        "DuckDuckGo"
+
                 })
 
                 if len(results) >= 8:
+
                     break
+
+            if results:
+
+                break
 
             # ------------------------------------------------
             # Alternative selector
             # ------------------------------------------------
 
-            if not results:
+            alternative_links = soup.select(
+                "a.result__a"
+            )
 
-                links = soup.select(
-                    "a.result__a"
+            print(
+                "DuckDuckGo alternative links:",
+                len(alternative_links)
+            )
+
+            for link_element in alternative_links:
+
+                title = clean_text(
+                    link_element.get_text(
+                        " ",
+                        strip=True
+                    )
                 )
 
-                print(
-                    "Alternative DDG links:",
-                    len(links)
+                link = decode_ddg_url(
+                    link_element.get(
+                        "href",
+                        ""
+                    )
                 )
 
-                for link_element in links:
+                if not title:
 
-                    title = clean_text(
-                        link_element.get_text(
-                            " ",
-                            strip=True
-                        )
-                    )
+                    continue
 
-                    link = decode_ddg_url(
-                        link_element.get(
-                            "href",
-                            ""
-                        )
-                    )
+                if is_wikipedia(link):
 
-                    if not title:
-                        continue
+                    continue
 
-                    if is_wikipedia(link):
-                        continue
+                results.append({
 
-                    results.append({
-                        "title": title,
-                        "snippet": title,
-                        "link": link,
-                        "source": "DuckDuckGo"
-                    })
+                    "title":
+                        title,
 
-                    if len(results) >= 8:
-                        break
+                    "snippet":
+                        title,
+
+                    "link":
+                        link,
+
+                    "source":
+                        "DuckDuckGo"
+
+                })
+
+                if len(results) >= 8:
+
+                    break
 
             if results:
 
@@ -612,7 +490,10 @@ def search_duckduckgo_html(query):
         except Exception as e:
 
             print(
-                "DuckDuckGo HTML error:",
+                "DuckDuckGo HTML error:"
+            )
+
+            print(
                 repr(e)
             )
 
@@ -620,12 +501,268 @@ def search_duckduckgo_html(query):
 
 
 # ============================================================
-# MAIN DUCKDUCKGO SEARCH
+# DUCKDUCKGO INSTANT ANSWER API
+# FALLBACK
+# ============================================================
+
+def search_duckduckgo_api(query):
+
+    print("-----------------------------------")
+
+    print(
+        "Trying DuckDuckGo API:",
+        query
+    )
+
+    try:
+
+        api_url = (
+            "https://api.duckduckgo.com/"
+        )
+
+        params = {
+
+            "q":
+                query,
+
+            "format":
+                "json",
+
+            "no_html":
+                "1",
+
+            "skip_disambig":
+                "0",
+
+            "no_redirect":
+                "1"
+
+        }
+
+        headers = {
+
+            "User-Agent":
+                "Mozilla/5.0 "
+                "(Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 "
+                "(KHTML, like Gecko) "
+                "Chrome/154.0.0.0 "
+                "Safari/537.36",
+
+            "Accept":
+                "application/json"
+
+        }
+
+        response = requests.get(
+            api_url,
+            params=params,
+            headers=headers,
+            timeout=20
+        )
+
+        print(
+            "DuckDuckGo API HTTP status:",
+            response.status_code
+        )
+
+        if response.status_code != 200:
+
+            print(
+                "DuckDuckGo API failed."
+            )
+
+            return []
+
+        data = response.json()
+
+        results = []
+
+        # ----------------------------------------------------
+        # Main abstract
+        # ----------------------------------------------------
+
+        abstract = clean_text(
+            data.get(
+                "AbstractText",
+                ""
+            )
+        )
+
+        abstract_url = data.get(
+            "AbstractURL",
+            ""
+        )
+
+        heading = clean_text(
+            data.get(
+                "Heading",
+                ""
+            )
+        )
+
+        if abstract:
+
+            if not is_wikipedia(
+                abstract_url
+            ):
+
+                results.append({
+
+                    "title":
+                        heading or query,
+
+                    "snippet":
+                        abstract,
+
+                    "link":
+                        abstract_url,
+
+                    "source":
+                        "DuckDuckGo"
+
+                })
+
+        # ----------------------------------------------------
+        # Related topics
+        # ----------------------------------------------------
+
+        def extract_topics(
+            topics
+        ):
+
+            output = []
+
+            for topic in topics:
+
+                if not isinstance(
+                    topic,
+                    dict
+                ):
+
+                    continue
+
+                if "Topics" in topic:
+
+                    output.extend(
+                        extract_topics(
+                            topic.get(
+                                "Topics",
+                                []
+                            )
+                        )
+                    )
+
+                    continue
+
+                text = clean_text(
+                    topic.get(
+                        "Text",
+                        ""
+                    )
+                )
+
+                link = topic.get(
+                    "FirstURL",
+                    ""
+                )
+
+                if not text:
+
+                    continue
+
+                if is_wikipedia(
+                    link
+                ):
+
+                    continue
+
+                output.append({
+
+                    "title":
+                        text[:120],
+
+                    "snippet":
+                        text,
+
+                    "link":
+                        link,
+
+                    "source":
+                        "DuckDuckGo"
+
+                })
+
+            return output
+
+        related_topics = extract_topics(
+            data.get(
+                "RelatedTopics",
+                []
+            )
+        )
+
+        for item in related_topics:
+
+            duplicate = False
+
+            for existing in results:
+
+                if (
+                    existing.get(
+                        "snippet",
+                        ""
+                    ).lower()
+                    ==
+                    item.get(
+                        "snippet",
+                        ""
+                    ).lower()
+                ):
+
+                    duplicate = True
+
+                    break
+
+            if not duplicate:
+
+                results.append(
+                    item
+                )
+
+            if len(results) >= 8:
+
+                break
+
+        print(
+            "DuckDuckGo API results:",
+            len(results)
+        )
+
+        return results[:8]
+
+    except Exception as e:
+
+        print(
+            "DuckDuckGo API error:"
+        )
+
+        print(
+            repr(e)
+        )
+
+        return []
+
+
+# ============================================================
+# MAIN INTERNET SEARCH
 # ============================================================
 
 def search_internet(query):
 
-    query = clean_text(query)
+    query = clean_text(
+        query
+    )
 
     if not query:
 
@@ -633,55 +770,60 @@ def search_internet(query):
 
     print("")
     print("===================================")
-    print("SEARCHING DUCKDUCKGO")
-    print("Question:", query)
+    print(
+        "INTERNET SEARCH:",
+        query
+    )
     print("===================================")
-
-    all_results = []
-
-    # --------------------------------------------------------
-    # Search queries
-    # --------------------------------------------------------
 
     search_queries = [
 
         query,
 
-        query + " communication systems",
+        query
+        + " communication systems",
 
-        query + " engineering"
+        query
+        + " engineering"
 
     ]
 
+    all_results = []
+
     # --------------------------------------------------------
-    # First attempt: DuckDuckGo HTML
+    # STEP 1: HTML SEARCH
     # --------------------------------------------------------
 
     for search_query in search_queries:
 
-        html_results = search_duckduckgo_html(
+        results = search_duckduckgo_html(
             search_query
         )
 
-        for result in html_results:
+        for result in results:
 
             if not is_wikipedia(
-                result.get("link", "")
+                result.get(
+                    "link",
+                    ""
+                )
             ):
 
-                all_results.append(result)
+                all_results.append(
+                    result
+                )
 
         if len(all_results) >= 8:
+
             break
 
     # --------------------------------------------------------
-    # Remove duplicate HTML results
+    # REMOVE DUPLICATES
     # --------------------------------------------------------
 
     unique_results = []
 
-    seen_links = set()
-    seen_text = set()
+    seen = set()
 
     for result in all_results:
 
@@ -690,7 +832,7 @@ def search_internet(query):
             ""
         )
 
-        text = result.get(
+        snippet = result.get(
             "snippet",
             ""
         )
@@ -698,19 +840,24 @@ def search_internet(query):
         key = (
             link.lower().strip()
             if link
-            else text.lower().strip()
+            else snippet.lower().strip()
         )
 
         if not key:
+
             continue
 
-        if key in seen_links or key in seen_text:
+        if key in seen:
+
             continue
 
-        seen_links.add(key)
-        seen_text.add(key)
+        seen.add(
+            key
+        )
 
-        unique_results.append(result)
+        unique_results.append(
+            result
+        )
 
     all_results = unique_results
 
@@ -720,25 +867,25 @@ def search_internet(query):
     )
 
     # --------------------------------------------------------
-    # FALLBACK:
-    # DuckDuckGo Instant Answer API
+    # STEP 2: API FALLBACK
     # --------------------------------------------------------
 
-    if len(all_results) == 0:
+    if not all_results:
 
-        print("")
         print(
             "HTML search returned no results."
         )
 
         print(
-            "Trying DuckDuckGo Instant Answer API..."
+            "Trying DuckDuckGo API fallback..."
         )
 
         for search_query in search_queries:
 
-            api_results = search_duckduckgo_api(
-                search_query
+            api_results = (
+                search_duckduckgo_api(
+                    search_query
+                )
             )
 
             for result in api_results:
@@ -748,12 +895,8 @@ def search_internet(query):
                     ""
                 )
 
-                snippet = result.get(
-                    "snippet",
-                    ""
-                )
-
                 if is_wikipedia(link):
+
                     continue
 
                 duplicate = False
@@ -765,10 +908,15 @@ def search_internet(query):
                             "snippet",
                             ""
                         ).lower()
-                        == snippet.lower()
+                        ==
+                        result.get(
+                            "snippet",
+                            ""
+                        ).lower()
                     ):
 
                         duplicate = True
+
                         break
 
                 if not duplicate:
@@ -778,13 +926,15 @@ def search_internet(query):
                     )
 
                 if len(all_results) >= 8:
+
                     break
 
             if len(all_results) >= 8:
+
                 break
 
     # --------------------------------------------------------
-    # Final cleanup
+    # FINAL CLEANUP
     # --------------------------------------------------------
 
     final_results = []
@@ -794,11 +944,17 @@ def search_internet(query):
     for result in all_results:
 
         title = clean_text(
-            result.get("title", "")
+            result.get(
+                "title",
+                ""
+            )
         )
 
         snippet = clean_text(
-            result.get("snippet", "")
+            result.get(
+                "snippet",
+                ""
+            )
         )
 
         link = result.get(
@@ -807,9 +963,11 @@ def search_internet(query):
         )
 
         if is_wikipedia(link):
+
             continue
 
         if not title and not snippet:
+
             continue
 
         key = (
@@ -819,36 +977,37 @@ def search_internet(query):
         )
 
         if key in seen:
+
             continue
 
-        seen.add(key)
+        seen.add(
+            key
+        )
 
         final_results.append({
-            "title": title or query,
-            "snippet": snippet,
-            "link": link,
-            "source": "DuckDuckGo"
+
+            "title":
+                title or query,
+
+            "snippet":
+                snippet,
+
+            "link":
+                link,
+
+            "source":
+                "DuckDuckGo"
+
         })
 
         if len(final_results) >= 8:
+
             break
 
-    print("")
     print(
-        "FINAL DUCKDUCKGO RESULTS:",
+        "Final DuckDuckGo results:",
         len(final_results)
     )
-
-    for number, result in enumerate(
-        final_results,
-        start=1
-    ):
-
-        print(
-            number,
-            "-",
-            result["title"]
-        )
 
     print("===================================")
     print("")
@@ -857,7 +1016,7 @@ def search_internet(query):
 
 
 # ============================================================
-# RANK SEARCH RESULTS
+# RANK INTERNET RESULTS
 # ============================================================
 
 def rank_search_results(
@@ -873,13 +1032,19 @@ def rank_search_results(
 
     for result in results:
 
-        text = (
-            result.get("title", "")
-            + " "
-            + result.get("snippet", "")
-        )
+        documents.append(
 
-        documents.append(text)
+            result.get(
+                "title",
+                ""
+            )
+            + " "
+            + result.get(
+                "snippet",
+                ""
+            )
+
+        )
 
     try:
 
@@ -888,29 +1053,48 @@ def rank_search_results(
         )
 
         matrix = vectorizer.fit_transform(
-            [query] + documents
+
+            [
+                query
+            ]
+            +
+            documents
+
         )
 
         scores = cosine_similarity(
+
             matrix[0:1],
+
             matrix[1:]
+
         )[0]
 
         ranked = []
 
-        for index, score in enumerate(scores):
+        for i, score in enumerate(
+            scores
+        ):
 
             item = dict(
-                results[index]
+                results[i]
             )
 
-            item["score"] = float(score)
+            item["score"] = float(
+                score
+            )
 
-            ranked.append(item)
+            ranked.append(
+                item
+            )
 
         ranked.sort(
-            key=lambda x: x["score"],
+
+            key=lambda x:
+                x["score"],
+
             reverse=True
+
         )
 
         return ranked
@@ -926,14 +1110,14 @@ def rank_search_results(
 
 
 # ============================================================
-# FORMAT SEARCH INFORMATION FOR GEMINI
+# BUILD GEMINI SEARCH CONTEXT
 # ============================================================
 
 def build_search_context(
     results
 ):
 
-    context_parts = []
+    parts = []
 
     for index, result in enumerate(
         results,
@@ -950,22 +1134,30 @@ def build_search_context(
             ""
         )
 
-        link = result.get(
+        url = result.get(
             "link",
             ""
         )
 
-        context_parts.append(
+        parts.append(
+
             f"""
 SOURCE {index}
-Title: {title}
-Information: {snippet}
-URL: {link}
+
+Title:
+{title}
+
+Information:
+{snippet}
+
+URL:
+{url}
 """.strip()
+
         )
 
     return "\n\n".join(
-        context_parts
+        parts
     )
 
 
@@ -987,38 +1179,106 @@ def generate_internet_answer(
     )
 
     prompt = f"""
-You are an AI assistant for a Communication Systems
-and Computer Networks educational application.
+You are an educational AI assistant specializing in:
 
-User question:
+- Communication Systems
+- Electronics
+- Electrical Engineering
+- Computer Networks
+- Signal Processing
+- Wireless Communication
+- Digital Communication
+
+USER QUESTION:
 {question}
 
-Use ONLY the information provided in the search results
-below.
-
-SEARCH RESULTS:
+INFORMATION FOUND FROM DUCKDUCKGO:
 {context}
 
-Instructions:
+Your job is to create ONE clean educational answer.
 
-1. Answer the user's question directly.
-2. Keep the answer concise but useful.
-3. Focus only on information relevant to the question.
-4. Do not mention information that is not supported by
-   the supplied search results.
-5. Do not use Wikipedia.
-6. Break the answer into clear subdivisions.
-7. Use headings where useful.
-8. Use bullet points for explanations.
-9. If a formula is relevant, write it clearly.
-10. Do not write one large paragraph.
-11. Do not invent facts.
-12. Do not say that you searched Google.
-13. Do not include a separate bibliography.
-14. Do not include raw URLs in the answer.
-15. The application will display the source links separately.
+IMPORTANT:
 
-Answer:
+1. Do NOT copy search-result snippets directly.
+2. Do NOT show a list of search results as the answer.
+3. Combine relevant information from the sources.
+4. Remove duplicate information.
+5. Ignore irrelevant sources.
+6. Do not use Wikipedia.
+7. Do not invent facts.
+8. Use only information supported by the supplied sources.
+9. Answer exactly what the user asked.
+10. Keep the answer easy to understand.
+11. Do not make the answer unnecessarily long.
+12. Do not include raw URLs.
+13. Sources will be displayed separately by the application.
+
+STRUCTURE THE ANSWER INTELLIGENTLY.
+
+For a definition/concept question, use sections such as:
+
+### [Topic]
+
+**Definition**
+Give a clear definition.
+
+**Symbol**
+Include this only if a standard symbol exists.
+
+**Formula**
+Include this only when applicable.
+
+**Unit**
+Include this only when applicable.
+
+**Explanation**
+Explain the concept simply.
+
+**Examples**
+- Example 1
+- Example 2
+
+**Applications**
+- Application 1
+- Application 2
+
+IMPORTANT:
+Do NOT include sections that are not relevant.
+
+For a comparison question:
+Use a clear comparison table.
+
+For a question asking for steps:
+Use numbered steps.
+
+For advantages/disadvantages:
+Use separate bullet lists.
+
+For a formula question:
+Show the formula and explain each variable.
+
+For a "what is" question:
+Start with a short definition and then explain it.
+
+For a "why" question:
+Explain the reason clearly.
+
+For a "how" question:
+Explain the process step-by-step.
+
+For a numerical problem:
+Show:
+1. Given
+2. Formula
+3. Substitution
+4. Calculation
+5. Final answer
+
+Do NOT return raw search snippets.
+
+Return only the final educational answer.
+
+ANSWER:
 """
 
     return ask_gemini(
@@ -1086,19 +1346,23 @@ def answer_from_pdf(
             "in the uploaded PDF."
         )
 
-    # --------------------------------------------------------
-    # Split PDF into chunks
-    # --------------------------------------------------------
-
     paragraphs = re.split(
         r"\n\s*\n",
         text
     )
 
     paragraphs = [
-        clean_text(p)
-        for p in paragraphs
-        if clean_text(p)
+
+        clean_text(
+            paragraph
+        )
+
+        for paragraph in paragraphs
+
+        if clean_text(
+            paragraph
+        )
+
     ]
 
     if not paragraphs:
@@ -1108,7 +1372,7 @@ def answer_from_pdf(
         ]
 
     # --------------------------------------------------------
-    # Exact keyword matching first
+    # Keyword matching
     # --------------------------------------------------------
 
     question_words = re.findall(
@@ -1117,6 +1381,7 @@ def answer_from_pdf(
     )
 
     stop_words = {
+
         "what",
         "when",
         "where",
@@ -1139,54 +1404,67 @@ def answer_from_pdf(
         "define",
         "give",
         "tell"
+
     }
 
     keywords = [
+
         word
+
         for word in question_words
+
         if word not in stop_words
+
     ]
 
-    direct_matches = []
+    matches = []
 
     for paragraph in paragraphs:
 
         lower = paragraph.lower()
 
-        matches = sum(
+        count = sum(
+
             1
+
             for keyword in keywords
+
             if keyword in lower
+
         )
 
-        if matches > 0:
+        if count > 0:
 
-            direct_matches.append(
+            matches.append(
                 (
-                    matches,
+                    count,
                     paragraph
                 )
             )
 
-    direct_matches.sort(
-        key=lambda x: x[0],
+    matches.sort(
+        key=lambda x:
+            x[0],
         reverse=True
     )
 
-    # --------------------------------------------------------
-    # TF-IDF fallback
-    # --------------------------------------------------------
-
     selected = []
 
-    if direct_matches:
+    if matches:
 
         selected = [
+
             item[1]
-            for item in direct_matches[:8]
+
+            for item in matches[:8]
+
         ]
 
     else:
+
+        # ----------------------------------------------------
+        # TF-IDF fallback
+        # ----------------------------------------------------
 
         try:
 
@@ -1195,21 +1473,30 @@ def answer_from_pdf(
             )
 
             matrix = vectorizer.fit_transform(
-                [question] + paragraphs
+
+                [
+                    question
+                ]
+                +
+                paragraphs
+
             )
 
-            similarities = cosine_similarity(
+            scores = cosine_similarity(
+
                 matrix[0:1],
+
                 matrix[1:]
+
             )[0]
 
-            ranked_indexes = similarities.argsort()[
+            indexes = scores.argsort()[
                 ::-1
             ]
 
-            for index in ranked_indexes[:8]:
+            for index in indexes[:8]:
 
-                if similarities[index] > 0:
+                if scores[index] > 0:
 
                     selected.append(
                         paragraphs[index]
@@ -1229,44 +1516,42 @@ def answer_from_pdf(
             "in the uploaded PDF."
         )
 
-    # --------------------------------------------------------
-    # Create answer
-    # --------------------------------------------------------
-
-    combined = "\n\n".join(
+    relevant_text = "\n\n".join(
         selected
     )
 
-    # If Gemini is available, use it
+    # --------------------------------------------------------
+    # Gemini PDF answer
     # --------------------------------------------------------
 
     if gemini_client:
 
         prompt = f"""
-You are answering a question using ONLY an uploaded PDF.
+You are answering a question using ONLY the uploaded PDF.
 
-User question:
+USER QUESTION:
 {question}
 
-Relevant content extracted from the uploaded PDF:
-{combined}
+RELEVANT PDF CONTENT:
+{relevant_text}
 
-Rules:
+IMPORTANT RULES:
 
-1. Answer ONLY using the supplied PDF content.
-2. Do not use Internet information.
-3. Do not add outside knowledge.
-4. Do not invent missing information.
-5. Keep the answer relevant to the question.
-6. Use headings and bullet points where useful.
-7. If the PDF does not contain enough information,
-   say exactly:
+1. Use ONLY the supplied PDF content.
+2. Do NOT use Internet information.
+3. Do NOT use outside knowledge.
+4. Do NOT invent information.
+5. Answer only what the user asks.
+6. Do not copy unrelated PDF content.
+7. Remove duplicate information.
+8. Use headings and bullet points where appropriate.
+9. Keep the answer concise.
+10. If the requested information is not present,
+respond exactly:
 
-"This information was not found in the uploaded PDF."
+This information was not found in the uploaded PDF.
 
-Do not mention these instructions.
-
-Answer:
+ANSWER:
 """
 
         answer = ask_gemini(
@@ -1304,17 +1589,29 @@ def upload_pdf():
         if "pdf" not in request.files:
 
             return jsonify({
-                "success": False,
-                "message": "No PDF file received."
+
+                "success":
+                    False,
+
+                "message":
+                    "No PDF file received."
+
             }), 400
 
-        file = request.files["pdf"]
+        file = request.files[
+            "pdf"
+        ]
 
         if not file.filename:
 
             return jsonify({
-                "success": False,
-                "message": "No PDF selected."
+
+                "success":
+                    False,
+
+                "message":
+                    "No PDF selected."
+
             }), 400
 
         if not file.filename.lower().endswith(
@@ -1322,8 +1619,13 @@ def upload_pdf():
         ):
 
             return jsonify({
-                "success": False,
-                "message": "Please upload a PDF file."
+
+                "success":
+                    False,
+
+                "message":
+                    "Please upload a PDF file."
+
             }), 400
 
         os.makedirs(
@@ -1332,14 +1634,21 @@ def upload_pdf():
         )
 
         safe_filename = re.sub(
+
             r"[^a-zA-Z0-9._-]",
+
             "_",
+
             file.filename
+
         )
 
         filepath = os.path.join(
+
             "pdfs",
+
             safe_filename
+
         )
 
         file.save(
@@ -1353,18 +1662,25 @@ def upload_pdf():
         if not extracted_text:
 
             return jsonify({
-                "success": False,
+
+                "success":
+                    False,
+
                 "message":
                     "Could not extract readable text from the PDF."
+
             }), 400
 
         pdf_text = extracted_text
+
         pdf_filename = file.filename
 
         print("")
         print("===================================")
-        print("PDF UPLOADED")
-        print("Filename:", pdf_filename)
+        print(
+            "PDF UPLOADED:",
+            pdf_filename
+        )
         print(
             "Extracted characters:",
             len(pdf_text)
@@ -1373,9 +1689,16 @@ def upload_pdf():
         print("")
 
         return jsonify({
-            "success": True,
-            "message": "PDF uploaded successfully.",
-            "filename": pdf_filename
+
+            "success":
+                True,
+
+            "message":
+                "PDF uploaded successfully.",
+
+            "filename":
+                pdf_filename
+
         })
 
     except Exception as e:
@@ -1386,9 +1709,13 @@ def upload_pdf():
         )
 
         return jsonify({
-            "success": False,
+
+            "success":
+                False,
+
             "message":
                 "An error occurred while uploading the PDF."
+
         }), 500
 
 
@@ -1411,37 +1738,54 @@ def ask_pdf():
         ) or {}
 
         question = clean_text(
-            data.get("question", "")
+            data.get(
+                "question",
+                ""
+            )
         )
 
         if not question:
 
             return jsonify({
+
                 "answer":
                     "Please enter a question."
+
             })
 
         if not pdf_text:
 
             return jsonify({
+
                 "answer":
                     "Please upload a PDF first."
+
             })
 
         print("")
         print("===================================")
-        print("PDF QUESTION:")
-        print(question)
+        print(
+            "PDF QUESTION:",
+            question
+        )
         print("===================================")
 
         answer = answer_from_pdf(
+
             question,
+
             pdf_text
+
         )
 
         return jsonify({
-            "answer": answer,
-            "filename": pdf_filename
+
+            "answer":
+                answer,
+
+            "filename":
+                pdf_filename
+
         })
 
     except Exception as e:
@@ -1452,8 +1796,10 @@ def ask_pdf():
         )
 
         return jsonify({
+
             "answer":
                 "An error occurred while processing the PDF question."
+
         }), 500
 
 
@@ -1474,25 +1820,34 @@ def ask_internet():
         ) or {}
 
         question = clean_text(
-            data.get("question", "")
+            data.get(
+                "question",
+                ""
+            )
         )
 
         if not question:
 
             return jsonify({
+
                 "answer":
                     "Please enter a question.",
-                "sources": []
+
+                "sources":
+                    []
+
             })
 
         print("")
         print("===================================")
-        print("INTERNET QUESTION:")
-        print(question)
+        print(
+            "INTERNET QUESTION:",
+            question
+        )
         print("===================================")
 
         # ----------------------------------------------------
-        # Search DuckDuckGo
+        # SEARCH
         # ----------------------------------------------------
 
         results = search_internet(
@@ -1505,7 +1860,7 @@ def ask_internet():
         )
 
         # ----------------------------------------------------
-        # No results
+        # NO RESULTS
         # ----------------------------------------------------
 
         if not results:
@@ -1515,86 +1870,109 @@ def ask_internet():
             )
 
             return jsonify({
+
                 "answer":
                     "❌ Internet search did not return any results. "
                     "Please try another question.",
-                "sources": []
+
+                "sources":
+                    []
+
             })
 
         # ----------------------------------------------------
-        # Rank results
+        # RANK RESULTS
         # ----------------------------------------------------
 
         ranked_results = rank_search_results(
+
             question,
+
             results
+
         )
 
-        # ----------------------------------------------------
-        # Keep relevant results
-        # ----------------------------------------------------
-
+        # Use only the most relevant sources
         selected_results = ranked_results[:6]
 
         print(
-            "Selected results:",
+            "Selected relevant sources:",
             len(selected_results)
         )
 
         # ----------------------------------------------------
-        # Gemini answer
+        # GEMINI GENERATES CLEAN ANSWER
         # ----------------------------------------------------
 
         answer = generate_internet_answer(
+
             question,
+
             selected_results
+
         )
 
         # ----------------------------------------------------
-        # Gemini unavailable
+        # DO NOT DISPLAY RAW SEARCH SNIPPETS
         # ----------------------------------------------------
 
         if not answer:
 
             print(
-                "Gemini did not return an answer."
+                "Gemini failed to generate a clean answer."
             )
 
-            # Build a simple fallback answer
-            fallback_parts = []
+            return jsonify({
 
-            for result in selected_results:
+                "answer":
+                    "❌ AI could not generate a clean answer "
+                    "from the Internet sources. Please try "
+                    "the question again.",
 
-                title = result.get(
-                    "title",
-                    ""
-                )
+                "sources": [
 
-                snippet = result.get(
-                    "snippet",
-                    ""
-                )
+                    {
+                        "title":
+                            result.get(
+                                "title",
+                                "Source"
+                            ),
 
-                if snippet:
+                        "url":
+                            result.get(
+                                "link",
+                                ""
+                            )
 
-                    fallback_parts.append(
-                        f"### {title}\n\n"
-                        f"{snippet}"
+                    }
+
+                    for result in selected_results
+
+                    if result.get(
+                        "link",
+                        ""
                     )
 
-            answer = "\n\n".join(
-                fallback_parts
-            )
+                    and not is_wikipedia(
+                        result.get(
+                            "link",
+                            ""
+                        )
+                    )
+
+                ]
+
+            })
 
         # ----------------------------------------------------
-        # Sources
+        # SOURCES ONLY
         # ----------------------------------------------------
 
         sources = []
 
         for result in selected_results:
 
-            link = result.get(
+            url = result.get(
                 "link",
                 ""
             )
@@ -1604,15 +1982,22 @@ def ask_internet():
                 "Source"
             )
 
-            if not link:
+            if not url:
+
                 continue
 
-            if is_wikipedia(link):
+            if is_wikipedia(url):
+
                 continue
 
             sources.append({
-                "title": title,
-                "url": link
+
+                "title":
+                    title,
+
+                "url":
+                    url
+
             })
 
         print(
@@ -1624,21 +2009,33 @@ def ask_internet():
         print("")
 
         return jsonify({
-            "answer": answer,
-            "sources": sources
+
+            "answer":
+                answer,
+
+            "sources":
+                sources
+
         })
 
     except Exception as e:
 
         print(
-            "Internet question error:",
+            "Internet question error:"
+        )
+
+        print(
             repr(e)
         )
 
         return jsonify({
+
             "answer":
                 "❌ An error occurred while searching the Internet.",
-            "sources": []
+
+            "sources":
+                []
+
         }), 500
 
 
@@ -1650,7 +2047,10 @@ def ask_internet():
 def page_not_found(error):
 
     return jsonify({
-        "error": "Page not found."
+
+        "error":
+            "Page not found."
+
     }), 404
 
 
@@ -1658,26 +2058,45 @@ def page_not_found(error):
 def internal_server_error(error):
 
     return jsonify({
-        "error": "Internal server error."
+
+        "error":
+            "Internal server error."
+
     }), 500
 
 
 # ============================================================
-# RUN APPLICATION
+# LOCAL HTTP SERVER
 # ============================================================
 
 if __name__ == "__main__":
 
     port = int(
+
         os.environ.get(
             "PORT",
             5000
         )
+
     )
 
-    app.run(
-        host="0.0.0.0",
-        port=port,
-        debug=False
+    print("")
+    print("===================================")
+    print("Communication Systems AI")
+    print("LOCAL HTTP SERVER")
+    print(
+        "http://127.0.0.1:"
+        + str(port)
     )
-```
+    print("===================================")
+    print("")
+
+    app.run(
+
+        host="0.0.0.0",
+
+        port=port,
+
+        debug=False
+
+    )
