@@ -19,9 +19,9 @@
         content="AI Study Assistant for Communication Systems and Computer Networks"
     >
 
-
     <!-- =====================================================
          MAIN CSS
+         GitHub Pages frontend-only
     ====================================================== -->
 
     <link
@@ -95,7 +95,9 @@
     <aside class="sidebar">
 
 
-        <!-- LOGO -->
+        <!-- =================================================
+             LOGO
+        ================================================== -->
 
         <div class="logo">
 
@@ -119,7 +121,9 @@
         </div>
 
 
-        <!-- NEW CHAT -->
+        <!-- =================================================
+             NEW CHAT
+        ================================================== -->
 
         <button
             id="newChatButton"
@@ -132,7 +136,9 @@
         </button>
 
 
-        <!-- SEARCH HISTORY -->
+        <!-- =================================================
+             SEARCH HISTORY
+        ================================================== -->
 
         <div class="history-section">
 
@@ -147,7 +153,9 @@
                     class="history-clear"
                     type="button"
                 >
+
                     Clear
+
                 </button>
 
             </div>
@@ -159,7 +167,9 @@
             >
 
                 <div class="empty-history">
+
                     No search history
+
                 </div>
 
             </div>
@@ -167,7 +177,9 @@
         </div>
 
 
-        <!-- AI TOOLS -->
+        <!-- =================================================
+             AI TOOLS
+        ================================================== -->
 
         <div class="ai-tools">
 
@@ -176,10 +188,15 @@
             </h3>
 
 
+            <!-- ChatGPT -->
+
             <button
                 class="tool-button"
                 type="button"
-                onclick="window.open('https://chatgpt.com/', '_blank')"
+                onclick="window.open(
+                    'https://chatgpt.com/',
+                    '_blank'
+                )"
             >
 
                 🤖 &nbsp; ChatGPT
@@ -187,10 +204,15 @@
             </button>
 
 
+            <!-- Gemini -->
+
             <button
                 class="tool-button"
                 type="button"
-                onclick="window.open('https://gemini.google.com/', '_blank')"
+                onclick="window.open(
+                    'https://gemini.google.com/',
+                    '_blank'
+                )"
             >
 
                 ✨ &nbsp; Gemini
@@ -211,33 +233,50 @@
     <main class="main">
 
 
-        <!-- HEADER -->
+        <!-- =================================================
+             HEADER
+        ================================================== -->
 
         <header class="header">
 
 
             <div class="header-left">
 
+
+                <!-- Header icon -->
+
                 <div class="header-icon">
+
                     📡
+
                 </div>
 
+
+                <!-- Header text -->
 
                 <div>
 
                     <h1>
+
                         Communication Systems AI
+
                     </h1>
 
+
                     <p>
+
                         Learn Communication Systems using
                         Internet and PDF resources
+
                     </p>
 
                 </div>
 
+
             </div>
 
+
+            <!-- Current mode -->
 
             <div
                 id="modeBadge"
@@ -260,7 +299,9 @@
         <section class="content">
 
 
-            <!-- ANSWER -->
+            <!-- =================================================
+                 ANSWER CARD
+            ================================================== -->
 
             <div class="answer-card">
 
@@ -270,32 +311,48 @@
                     class="ai-answer"
                 >
 
+
+                    <!-- =================================================
+                         WELCOME SCREEN
+                    ================================================== -->
+
                     <div class="welcome-answer">
 
+
                         <div class="welcome-icon">
+
                             🤖
+
                         </div>
 
 
                         <h3>
+
                             AI Assistant
+
                         </h3>
 
 
                         <p>
+
                             Ask a Communication Systems
                             or Computer Networks question.
+
                         </p>
 
 
                         <p>
+
                             Use Internet Q&amp;A to search
                             relevant information, or upload
                             a PDF and ask questions directly
                             from the document.
+
                         </p>
 
+
                     </div>
+
 
                 </div>
 
@@ -304,10 +361,16 @@
 
 
 
-            <!-- QUESTION -->
+            <!-- =================================================
+                 QUESTION SECTION
+            ================================================== -->
 
             <section class="question-section">
 
+
+                <!-- =================================================
+                     QUESTION INPUT
+                ================================================== -->
 
                 <div class="question-row">
 
@@ -334,10 +397,14 @@
 
 
 
-                <!-- MODE BUTTONS -->
+                <!-- =================================================
+                     MODE BUTTONS
+                ================================================== -->
 
                 <div class="action-buttons">
 
+
+                    <!-- Internet Q&A -->
 
                     <button
                         id="internetButton"
@@ -350,6 +417,8 @@
                     </button>
 
 
+                    <!-- Upload PDF -->
+
                     <button
                         id="uploadPdfButton"
                         class="action-button"
@@ -360,6 +429,8 @@
 
                     </button>
 
+
+                    <!-- PDF Q&A -->
 
                     <button
                         id="pdfButton"
@@ -376,13 +447,18 @@
 
 
 
-                <!-- PDF UPLOAD -->
+                <!-- =================================================
+                     PDF UPLOAD AREA
+                ================================================== -->
 
                 <div
                     id="pdfUploadArea"
                     class="pdf-upload-area"
+                    style="display: none;"
                 >
 
+
+                    <!-- Hidden/native file input -->
 
                     <input
                         type="file"
@@ -391,8 +467,12 @@
                     >
 
 
+                    <!-- Selected file name -->
+
                     <span id="pdfFileName">
+
                         No PDF selected
+
                     </span>
 
 
@@ -400,7 +480,9 @@
 
 
 
-                <!-- STATUS -->
+                <!-- =================================================
+                     STATUS
+                ================================================== -->
 
                 <div
                     id="statusText"
@@ -426,7 +508,11 @@
 
 
 <!-- =========================================================
-     JAVASCRIPT
+     FRONTEND JAVASCRIPT
+     
+     IMPORTANT:
+     This is a normal JavaScript file.
+     No Flask/Jinja syntax is used.
 ========================================================== -->
 
 <script src="script.js"></script>

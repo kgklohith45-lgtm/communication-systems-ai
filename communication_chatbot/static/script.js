@@ -1,19 +1,40 @@
 // ============================================================
-// COMMUNICATION SYSTEMS AI - SCRIPT.JS
-// GitHub Pages Frontend
+// COMMUNICATION SYSTEMS AI
+// FRONTEND-ONLY GITHUB PAGES VERSION
+// ============================================================
+//
+// No Flask
+// No Render
+// No Python backend
+//
+// Uses:
+// 1. Gemini API directly from browser
+// 2. DuckDuckGo Instant Answer API
+// 3. PDF.js for browser-side PDF extraction
+// 4. LocalStorage for history and PDF text
+//
 // ============================================================
 
 document.addEventListener("DOMContentLoaded", () => {
 
     // ========================================================
-    // BACKEND API URL
+    // CONFIGURATION
     // ========================================================
-    //
-    // IMPORTANT:
-    // Replace this after deploying the Flask backend.
-    //
-    const API_URL = "YOUR_BACKEND_URL";
 
+    const GEMINI_MODEL = "gemini-2.5-flash";
+
+    const GEMINI_API_URL =
+        "https://generativelanguage.googleapis.com/v1beta/models/" +
+        GEMINI_MODEL +
+        ":generateContent";
+
+    const DUCKDUCKGO_URL =
+        "https://api.duckduckgo.com/";
+
+
+    // ========================================================
+    // ELEMENTS
+    // ========================================================
 
     const questionInput =
         document.getElementById("questionInput");
@@ -58,9 +79,17 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("pdfFileName");
 
 
+    // ========================================================
+    // STATE
+    // ========================================================
+
     let currentMode = "internet";
 
     let pdfUploaded = false;
+
+    let currentPDFText = "";
+
+    let currentPDFName = "";
 
 
     let searchHistory = JSON.parse(
@@ -68,6 +97,49 @@ document.addEventListener("DOMContentLoaded", () => {
             "communicationSearchHistory"
         ) || "[]"
     );
+
+
+    // ========================================================
+    // GEMINI API KEY
+    // ========================================================
+
+    function getGeminiAPIKey() {
+
+        let apiKey =
+            localStorage.getItem(
+                "communicationGeminiAPIKey"
+            );
+
+
+        if (apiKey) {
+            return apiKey;
+        }
+
+
+        apiKey = prompt(
+            "Enter your Gemini API key.\n\n" +
+            "The key will be stored only in this browser's localStorage."
+        );
+
+
+        if (!apiKey || !apiKey.trim()) {
+
+            return null;
+        }
+
+
+        apiKey =
+            apiKey.trim();
+
+
+        localStorage.setItem(
+            "communicationGeminiAPIKey",
+            apiKey
+        );
+
+
+        return apiKey;
+    }
 
 
     // ========================================================
@@ -94,15 +166,18 @@ document.addEventListener("DOMContentLoaded", () => {
             "<strong>$1</strong>"
         );
 
+
         text = text.replace(
             /(?<!\*)\*([^*]+)\*(?!\*)/g,
             "<em>$1</em>"
         );
 
+
         text = text.replace(
             /`([^`]+)`/g,
             "<code>$1</code>"
         );
+
 
         return text;
     }
@@ -195,7 +270,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
         // ----------------------------------------------------
-        // Separate headings
+        // Headings
         // ----------------------------------------------------
 
         text = text.replace(
@@ -205,7 +280,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
         // ----------------------------------------------------
-        // Separate bullets
+        // Bullets
         // ----------------------------------------------------
 
         text = text.replace(
@@ -261,7 +336,8 @@ document.addEventListener("DOMContentLoaded", () => {
             "Formula",
             "Formulas",
             "Definition",
-            "Principle"
+            "Principle",
+            "Sources"
 
         ];
 
@@ -302,7 +378,8 @@ document.addEventListener("DOMContentLoaded", () => {
         // Escape HTML
         // ----------------------------------------------------
 
-        text = escapeHTML(text);
+        text =
+            escapeHTML(text);
 
 
         // ----------------------------------------------------
@@ -375,10 +452,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
 
-            // ------------------------------------------------
             // Heading
-            // ------------------------------------------------
-
             if (line.startsWith("### ")) {
 
                 closeList();
@@ -418,10 +492,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
 
-            // ------------------------------------------------
             // Bullet
-            // ------------------------------------------------
-
             if (
                 line.startsWith("- ") ||
                 line.startsWith("* ") ||
@@ -439,7 +510,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
                     inList = true;
 
-                    listType = "unordered";
+                    listType =
+                        "unordered";
                 }
 
 
@@ -456,10 +528,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
 
-            // ------------------------------------------------
             // Numbered list
-            // ------------------------------------------------
-
             const numberMatch =
                 line.match(
                     /^(\d+)\.\s+(.*)$/
@@ -479,7 +548,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
                     inList = true;
 
-                    listType = "ordered";
+                    listType =
+                        "ordered";
                 }
 
 
@@ -492,11 +562,9 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
 
-            // ------------------------------------------------
             // Normal paragraph
-            // ------------------------------------------------
-
             closeList();
+
 
             html +=
                 `<p>${formatInlineMarkdown(
@@ -547,7 +615,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     "MathJax rendering error:",
                     error
                 );
-
             }
         }
     }
@@ -563,11 +630,10 @@ document.addEventListener("DOMContentLoaded", () => {
             formatAIAnswer(answer);
 
 
-        setTimeout(() => {
-
-            renderMath();
-
-        }, 20);
+        setTimeout(
+            renderMath,
+            20
+        );
     }
 
 
@@ -648,7 +714,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
         searchHistory =
-            searchHistory.slice(0, 20);
+            searchHistory.slice(
+                0,
+                20
+            );
 
 
         localStorage.setItem(
@@ -666,7 +735,9 @@ document.addEventListener("DOMContentLoaded", () => {
         historyList.innerHTML = "";
 
 
-        if (searchHistory.length === 0) {
+        if (
+            searchHistory.length === 0
+        ) {
 
             historyList.innerHTML = `
 
@@ -768,7 +839,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
 
-        if (mode === "internet") {
+        if (
+            mode === "internet"
+        ) {
 
             statusText.textContent =
                 "Internet Q&A mode";
@@ -788,6 +861,691 @@ document.addEventListener("DOMContentLoaded", () => {
             pdfUploadArea.style.display =
                 "flex";
         }
+    }
+
+
+    // ========================================================
+    // LOAD PDF.JS
+    // ========================================================
+
+    async function loadPDFJS() {
+
+        if (
+            window.pdfjsLib
+        ) {
+
+            return;
+        }
+
+
+        await new Promise(
+            (resolve, reject) => {
+
+                const script =
+                    document.createElement(
+                        "script"
+                    );
+
+
+                script.src =
+                    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs";
+
+
+                script.type =
+                    "module";
+
+
+                script.onload =
+                    resolve;
+
+
+                script.onerror =
+                    reject;
+
+
+                document.head.appendChild(
+                    script
+                );
+
+            }
+        );
+
+
+        // The module build exposes differently
+        // depending on browser/CDN behavior.
+        //
+        // We therefore load the legacy build below
+        // if pdfjsLib is unavailable.
+
+        if (!window.pdfjsLib) {
+
+            await new Promise(
+                (resolve, reject) => {
+
+                    const script =
+                        document.createElement(
+                            "script"
+                        );
+
+
+                    script.src =
+                        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+
+
+                    script.onload =
+                        resolve;
+
+
+                    script.onerror =
+                        reject;
+
+
+                    document.head.appendChild(
+                        script
+                    );
+
+                }
+            );
+        }
+
+
+        if (
+            window.pdfjsLib &&
+            window.pdfjsLib.GlobalWorkerOptions
+        ) {
+
+            window.pdfjsLib
+                .GlobalWorkerOptions
+                .workerSrc =
+                "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+        }
+    }
+
+
+    // ========================================================
+    // EXTRACT PDF TEXT
+    // ========================================================
+
+    async function extractPDFText(file) {
+
+        await loadPDFJS();
+
+
+        if (!window.pdfjsLib) {
+
+            throw new Error(
+                "PDF.js could not be loaded."
+            );
+        }
+
+
+        const arrayBuffer =
+            await file.arrayBuffer();
+
+
+        const pdf =
+            await window.pdfjsLib.getDocument({
+                data: arrayBuffer
+            }).promise;
+
+
+        let fullText = "";
+
+
+        for (
+            let pageNumber = 1;
+            pageNumber <= pdf.numPages;
+            pageNumber++
+        ) {
+
+            const page =
+                await pdf.getPage(
+                    pageNumber
+                );
+
+
+            const content =
+                await page.getTextContent();
+
+
+            const pageText =
+                content.items
+                    .map(
+                        item =>
+                            item.str
+                    )
+                    .join(" ");
+
+
+            fullText +=
+                `\n\n--- Page ${pageNumber} ---\n\n` +
+                pageText;
+        }
+
+
+        return fullText.trim();
+    }
+
+
+    // ========================================================
+    // GEMINI REQUEST
+    // ========================================================
+
+    async function askGemini(
+        prompt,
+        systemInstruction = ""
+    ) {
+
+        const apiKey =
+            getGeminiAPIKey();
+
+
+        if (!apiKey) {
+
+            throw new Error(
+                "Gemini API key was not provided."
+            );
+        }
+
+
+        const requestBody = {
+
+            contents: [
+
+                {
+
+                    role: "user",
+
+                    parts: [
+
+                        {
+                            text:
+                                systemInstruction +
+                                "\n\n" +
+                                prompt
+                        }
+
+                    ]
+
+                }
+
+            ],
+
+            generationConfig: {
+
+                temperature: 0.2,
+
+                maxOutputTokens: 2048
+
+            }
+
+        };
+
+
+        const response =
+            await fetch(
+                GEMINI_API_URL +
+                "?key=" +
+                encodeURIComponent(
+                    apiKey
+                ),
+                {
+
+                    method: "POST",
+
+                    headers: {
+
+                        "Content-Type":
+                            "application/json"
+
+                    },
+
+                    body:
+                        JSON.stringify(
+                            requestBody
+                        )
+
+                }
+            );
+
+
+        if (!response.ok) {
+
+            const errorText =
+                await response.text();
+
+
+            console.error(
+                "Gemini API error:",
+                errorText
+            );
+
+
+            throw new Error(
+                "Gemini API request failed."
+            );
+        }
+
+
+        const data =
+            await response.json();
+
+
+        const answer =
+            data
+                ?.candidates?.[0]
+                ?.content
+                ?.parts
+                ?.map(
+                    part =>
+                        part.text || ""
+                )
+                .join("");
+
+
+        if (!answer) {
+
+            throw new Error(
+                "Gemini returned an empty answer."
+            );
+        }
+
+
+        return answer;
+    }
+
+
+    // ========================================================
+    // DUCKDUCKGO SEARCH
+    // ========================================================
+
+    async function searchDuckDuckGo(
+        query
+    ) {
+
+        const url =
+            DUCKDUCKGO_URL +
+            "?q=" +
+            encodeURIComponent(query) +
+            "&format=json" +
+            "&no_html=1" +
+            "&skip_disambig=1";
+
+
+        try {
+
+            const response =
+                await fetch(
+                    url
+                );
+
+
+            if (!response.ok) {
+
+                throw new Error(
+                    "DuckDuckGo search failed."
+                );
+            }
+
+
+            const data =
+                await response.json();
+
+
+            const results = [];
+
+
+            // ------------------------------------------------
+            // Abstract
+            // ------------------------------------------------
+
+            if (
+                data.AbstractText &&
+                data.AbstractText.trim()
+            ) {
+
+                results.push({
+
+                    title:
+                        data.Heading ||
+                        "DuckDuckGo Result",
+
+                    text:
+                        data.AbstractText,
+
+                    url:
+                        data.AbstractURL ||
+                        ""
+
+                });
+            }
+
+
+            // ------------------------------------------------
+            // Related Topics
+            // ------------------------------------------------
+
+            if (
+                Array.isArray(
+                    data.RelatedTopics
+                )
+            ) {
+
+                function collectTopics(
+                    topics
+                ) {
+
+                    for (
+                        const topic
+                        of topics
+                    ) {
+
+                        if (
+                            topic.Text &&
+                            topic.FirstURL
+                        ) {
+
+                            results.push({
+
+                                title:
+                                    topic.Text,
+
+                                text:
+                                    topic.Text,
+
+                                url:
+                                    topic.FirstURL
+
+                            });
+                        }
+
+
+                        if (
+                            Array.isArray(
+                                topic.Topics
+                            )
+                        ) {
+
+                            collectTopics(
+                                topic.Topics
+                            );
+                        }
+
+
+                        if (
+                            results.length >= 8
+                        ) {
+
+                            return;
+                        }
+                    }
+                }
+
+
+                collectTopics(
+                    data.RelatedTopics
+                );
+            }
+
+
+            return results
+                .filter(
+                    result => {
+
+                        if (
+                            !result.url
+                        ) {
+
+                            return false;
+                        }
+
+
+                        const lower =
+                            result.url
+                                .toLowerCase();
+
+
+                        // Explicitly exclude Wikipedia
+                        if (
+                            lower.includes(
+                                "wikipedia.org"
+                            )
+                        ) {
+
+                            return false;
+                        }
+
+
+                        return true;
+                    }
+                )
+                .slice(0, 8);
+
+        } catch (error) {
+
+            console.error(
+                "DuckDuckGo error:",
+                error
+            );
+
+
+            return [];
+        }
+    }
+
+
+    // ========================================================
+    // INTERNET QUESTION
+    // ========================================================
+
+    async function askInternet(
+        question
+    ) {
+
+        statusText.textContent =
+            "Searching the Internet...";
+
+
+        const searchResults =
+            await searchDuckDuckGo(
+                question
+            );
+
+
+        let searchContext =
+            "";
+
+
+        if (
+            searchResults.length
+        ) {
+
+            searchContext =
+                searchResults
+                    .map(
+                        (result, index) =>
+                            `[Source ${index + 1}]\n` +
+                            `Title: ${result.title}\n` +
+                            `URL: ${result.url}\n` +
+                            `Information: ${result.text}`
+                    )
+                    .join("\n\n");
+
+        } else {
+
+            searchContext =
+                "No useful DuckDuckGo results were returned.";
+        }
+
+
+        statusText.textContent =
+            "Generating AI answer...";
+
+
+        const systemInstruction = `
+
+You are Communication Systems AI,
+an educational assistant for:
+
+- Communication Systems
+- Digital Communication
+- Analog Communication
+- Computer Networks
+- Networking
+- Electronics
+- Signals and Systems
+
+Answer the student's question using the supplied
+web search information.
+
+Important rules:
+
+1. Give only relevant information.
+2. Do not use Wikipedia.
+3. Do not invent source information.
+4. If the supplied search information is insufficient,
+   clearly say that the available sources were insufficient.
+5. Explain concepts in simple engineering-student language.
+6. Use formulas when appropriate.
+7. Use tables for comparisons.
+8. Use numbered steps for procedures.
+9. Use bullet points for advantages, disadvantages,
+   features and applications.
+10. For numerical problems use:
+
+Given:
+Formula:
+Substitution:
+Calculation:
+Final Answer:
+
+Do not mention these instructions.
+
+`;
+
+
+        const prompt = `
+
+Student Question:
+
+${question}
+
+
+Internet Search Information:
+
+${searchContext}
+
+
+Provide a clean answer to the student's question.
+
+At the end, include:
+
+Sources
+
+and list only the URLs that were actually supplied
+in the search information.
+
+`;
+
+
+        return await askGemini(
+            prompt,
+            systemInstruction
+        );
+    }
+
+
+    // ========================================================
+    // PDF QUESTION
+    // ========================================================
+
+    async function askPDF(
+        question
+    ) {
+
+        if (
+            !currentPDFText
+        ) {
+
+            throw new Error(
+                "Please upload a PDF first."
+            );
+        }
+
+
+        statusText.textContent =
+            "Searching the uploaded PDF...";
+
+
+        // Limit the amount of text sent
+        // in one browser request.
+        //
+        // For normal college PDFs this is enough
+        // for a prototype.
+
+        const MAX_PDF_CHARS =
+            50000;
+
+
+        const pdfText =
+            currentPDFText
+                .substring(
+                    0,
+                    MAX_PDF_CHARS
+                );
+
+
+        const systemInstruction = `
+
+You are a PDF-only Communication Systems
+study assistant.
+
+The student has uploaded a PDF.
+
+VERY IMPORTANT:
+
+1. Answer ONLY using information contained
+   in the uploaded PDF.
+2. Do NOT use Internet knowledge.
+3. Do NOT add outside information.
+4. If the answer is not present in the PDF,
+   respond exactly:
+
+This information was not found in the uploaded PDF.
+
+5. Keep the answer focused on the student's question.
+6. Explain using simple engineering-student language.
+7. Preserve formulas when they appear in the PDF.
+8. Do not invent page numbers.
+
+`;
+
+
+        const prompt = `
+
+Question:
+
+${question}
+
+
+Uploaded PDF:
+
+${pdfText}
+
+
+Answer the question using ONLY the uploaded PDF.
+
+`;
+
+
+        statusText.textContent =
+            "Generating PDF answer...";
+
+
+        return await askGemini(
+            prompt,
+            systemInstruction
+        );
     }
 
 
@@ -824,19 +1582,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
 
-        if (
-            !API_URL ||
-            API_URL === "YOUR_BACKEND_URL"
-        ) {
-
-            showError(
-                "Backend is not connected yet. Deploy the Flask backend and add its URL in script.js."
-            );
-
-            return;
-        }
-
-
         addToHistory(
             question
         );
@@ -849,70 +1594,67 @@ document.addEventListener("DOMContentLoaded", () => {
             true;
 
 
-        const endpoint =
-            currentMode === "pdf"
-                ? "/ask_pdf"
-                : "/ask_internet";
-
-
         try {
 
-            const response =
-                await fetch(
-                    API_URL + endpoint,
-                    {
-                        method: "POST",
-
-                        headers: {
-                            "Content-Type":
-                                "application/json"
-                        },
-
-                        body: JSON.stringify({
-                            question:
-                                question
-                        })
-                    }
-                );
+            let answer;
 
 
-            if (!response.ok) {
+            if (
+                currentMode === "internet"
+            ) {
 
-                throw new Error(
-                    `Server error: ${response.status}`
-                );
-            }
-
-
-            const data =
-                await response.json();
-
-
-            if (data.answer) {
-
-                showAnswer(
-                    data.answer
-                );
+                answer =
+                    await askInternet(
+                        question
+                    );
 
             } else {
 
-                showError(
-                    "No answer was returned."
-                );
+                answer =
+                    await askPDF(
+                        question
+                    );
             }
+
+
+            showAnswer(
+                answer
+            );
+
+
+            statusText.textContent =
+                currentMode === "internet"
+                    ? "Internet Q&A complete"
+                    : "PDF Q&A complete";
 
 
         } catch (error) {
 
             console.error(
-                "Question error:",
                 error
             );
 
 
+            let message =
+                "Unable to process your question.";
+
+
+            if (
+                error.message
+            ) {
+
+                message =
+                    error.message;
+            }
+
+
             showError(
-                "Unable to connect to the backend server."
+                message
             );
+
+
+            statusText.textContent =
+                "Error";
 
 
         } finally {
@@ -924,7 +1666,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     // ========================================================
-    // OPEN FILE PICKER
+    // OPEN PDF FILE PICKER
     // ========================================================
 
     uploadButton.addEventListener(
@@ -973,31 +1715,9 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
 
-            if (
-                !API_URL ||
-                API_URL === "YOUR_BACKEND_URL"
-            ) {
-
-                showError(
-                    "Backend is not connected yet. Deploy the Flask backend and add its URL in script.js."
-                );
-
-                return;
-            }
-
-
             pdfFileName.textContent =
-                "Selected: " + file.name;
-
-
-            const formData =
-                new FormData();
-
-
-            formData.append(
-                "pdf",
-                file
-            );
+                "Selected: " +
+                file.name;
 
 
             uploadButton.disabled =
@@ -1005,89 +1725,99 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
             statusText.textContent =
-                "Uploading PDF...";
+                "Reading PDF in browser...";
 
 
             try {
 
-                const response =
-                    await fetch(
-                        API_URL + "/upload_pdf",
-                        {
-                            method: "POST",
-                            body: formData
-                        }
+                const text =
+                    await extractPDFText(
+                        file
                     );
 
 
-                if (!response.ok) {
+                if (
+                    !text ||
+                    text.trim().length < 20
+                ) {
 
                     throw new Error(
-                        `Server error: ${response.status}`
+                        "No readable text was found in this PDF. Scanned/image-only PDFs need OCR."
                     );
                 }
 
 
-                const data =
-                    await response.json();
+                currentPDFText =
+                    text;
 
 
-                if (data.success) {
-
-                    pdfUploaded =
-                        true;
+                currentPDFName =
+                    file.name;
 
 
-                    setMode(
-                        "pdf"
-                    );
+                pdfUploaded =
+                    true;
 
 
-                    statusText.textContent =
-                        "PDF ready for questions";
+                setMode(
+                    "pdf"
+                );
 
 
-                    showAnswer(`
+                statusText.textContent =
+                    "PDF ready for questions";
+
+
+                showAnswer(`
 
 ### PDF Uploaded Successfully
 
 **File:** ${file.name}
 
-You can now ask questions about this PDF.
+The PDF was read directly in your browser.
 
-The PDF Q&A mode answers questions using the uploaded document.
+You can now ask questions about the document.
 
-                    `);
+PDF Q&A will use only the uploaded PDF content.
 
-
-                } else {
-
-                    showError(
-                        data.message ||
-                        "PDF upload failed."
-                    );
-
-                }
+                `);
 
 
             } catch (error) {
 
                 console.error(
-                    "PDF upload error:",
+                    "PDF error:",
                     error
                 );
 
 
+                currentPDFText =
+                    "";
+
+
+                currentPDFName =
+                    "";
+
+
+                pdfUploaded =
+                    false;
+
+
                 showError(
-                    "Unable to upload PDF to the backend."
+                    error.message ||
+                    "Unable to read the PDF."
                 );
+
+
+                statusText.textContent =
+                    "PDF reading failed";
+
 
             } finally {
 
                 uploadButton.disabled =
                     false;
             }
-
         }
     );
 
@@ -1106,6 +1836,14 @@ The PDF Q&A mode answers questions using the uploaded document.
 
             pdfUploaded =
                 false;
+
+
+            currentPDFText =
+                "";
+
+
+            currentPDFName =
+                "";
 
 
             uploadInput.value =
